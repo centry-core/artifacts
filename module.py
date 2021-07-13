@@ -1,6 +1,3 @@
-#!/usr/bin/python3
-# coding=utf-8
-
 #   Copyright 2021 getcarrier.io
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
@@ -33,7 +30,7 @@ class Module(module.ModuleModel):
 
     def init(self):
         """ Init module """
-        log.info("Initializing module Tasks")
+        log.info("Initializing module Artifacts")
         from .api.buckets import Buckets
         from .api.artifacts import Artifacts
         from .api.artifact import Artifact
@@ -47,4 +44,4 @@ class Module(module.ModuleModel):
 
     def deinit(self):  # pylint: disable=R0201
         """ De-init module """
-        log.info("De-initializing module")
+        log.info("De-initializing module Artifacts")
