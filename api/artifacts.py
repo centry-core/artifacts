@@ -25,7 +25,7 @@ class Artifacts(RestResource):
         files = c.list_files(bucket)
         for each in files:
             each["size"] = size(each["size"])
-        return { "total": len(files), "rows": files }
+        return {"total": len(files), "rows": files}
 
     def post(self, project_id: int, bucket: str):
         project = self.rpc.project_get_or_404(project_id=project_id)
