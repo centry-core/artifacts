@@ -17,6 +17,7 @@
 from pylon.core.tools import log  # pylint: disable=E0611,E0401
 from pylon.core.tools import module  # pylint: disable=E0611,E0401
 
+from .api.artifacts_security_results_page import ArtifactsForSecurityResults, ArtifactDownload
 from ..shared.utils.api_utils import add_resource_to_api
 
 
@@ -41,6 +42,9 @@ class Module(module.ModuleModel):
         #TODO: rename in interceptor
         add_resource_to_api(self.context.api, Artifact, "/artifacts/<int:project_id>/<string:bucket>/<string:filename>",
                             endpoint="artifact_old")
+
+        add_resource_to_api(self.context.api, ArtifactsForSecurityResults, "/artifact/security/<int:run_id>")
+        add_resource_to_api(self.context.api, ArtifactDownload, "/artifact/security/<int:run_id>/<string:filename>")
 
     def deinit(self):  # pylint: disable=R0201
         """ De-init module """
