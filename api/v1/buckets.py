@@ -29,7 +29,7 @@ class API(Resource):
         args = request.json
         bucket = args["name"]
         expiration_measure = args["expiration_measure"]
-        expiration_value = int(args["expiration_value"])
+        expiration_value = args["expiration_value"]
 
         project = self.module.context.rpc_manager.call.project_get_or_404(project_id=project_id)
         data_retention_limit = project.get_data_retention_limit()
@@ -37,9 +37,7 @@ class API(Resource):
         days = data_retention_limit or None
         if expiration_value and expiration_measure:
             today_date = datetime.today().date()
-            log.info(today_date)
-            log.info(relativedelta(**{expiration_measure: expiration_value}))
-            expiration_date = today_date + relativedelta(**{expiration_measure: expiration_value})
+            expiration_date = today_date + relativedelta(**{expiration_measure: int(expiration_value)})
             time_delta = expiration_date - today_date
             days = time_delta.days
             if data_retention_limit != -1 and days > data_retention_limit:
