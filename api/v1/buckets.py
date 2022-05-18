@@ -3,29 +3,21 @@ from dateutil.relativedelta import relativedelta
 from werkzeug.exceptions import Forbidden
 from hurry.filesize import size
 
-from ...shared.utils.api_utils import build_req_parser
-from ...shared.utils.restApi import RestResource
-from ...shared.connectors.minio import MinioClient
+from flask import request
+from flask_restful import Resource
+from ....shared.tools.minio_client import MinioClient
 
 
-class Buckets(RestResource):
-    post_rules = (
-        dict(name="name", type=str, location="json", required=True),
-        dict(name="expiration_measure", type=str, location="json",
-             choices=("days", "weeks", "months", "years"),
-             help="Bad choice: {error_msg}"),
-        dict(name="expiration_value", type=int, location="json", required=False),
-    )
+class API(Resource):
+    url_params = [
+        '<int:project_id>',
+    ]
 
-    def __init__(self):
-        super().__init__()
-        self.__init_req_parsers()
-
-    def __init_req_parsers(self):
-        self._parser_post = build_req_parser(rules=self.post_rules)
+    def __init__(self, module):
+        self.module = module
 
     def get(self, project_id: int):
-        project = self.rpc.project_get_or_404(project_id=project_id)
+        project = self.module.context.rpc_manager.call.project_get_or_404(project_id=project_id)
         c = MinioClient(project)
         buckets = c.list_bucket()
         rows = []
@@ -34,25 +26,30 @@ class Buckets(RestResource):
         return {"total": len(buckets), "rows": rows}
 
     def post(self, project_id: int):
-        args = self._parser_post.parse_args()
+        args = request.json
         bucket = args["name"]
         expiration_measure = args["expiration_measure"]
-        expiration_value = args["expiration_value"]
+        expiration_value = int(args["expiration_value"])
 
-        project = self.rpc.project_get_or_404(project_id)
+        project = self.module.context.rpc_manager.call.project_get_or_404(project_id=project_id)
         data_retention_limit = project.get_data_retention_limit()
         minio_client = MinioClient(project=project)
         days = data_retention_limit or None
-
         if expiration_value and expiration_measure:
             today_date = datetime.today().date()
+            log.info(today_date)
+            log.info(relativedelta(**{expiration_measure: expiration_value}))
             expiration_date = today_date + relativedelta(**{expiration_measure: expiration_value})
             time_delta = expiration_date - today_date
             days = time_delta.days
             if data_retention_limit != -1 and days > data_retention_limit:
                 raise Forbidden(description="The data retention limit allowed in the project has been exceeded")
-
         created = minio_client.create_bucket(bucket)
         if created and days:
             minio_client.configure_bucket_lifecycle(bucket=bucket, days=days)
         return {"message": "Created", "code": 200}
+
+    def delete(self, project_id: int):
+        project = self.module.context.rpc_manager.call.project_get_or_404(project_id=project_id)
+        MinioClient(project=project).remove_bucket(request.args["name"])
+        return {"message": "Deleted", "code": 200}
