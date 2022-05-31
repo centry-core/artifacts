@@ -5,7 +5,8 @@ from hurry.filesize import size
 
 from flask import request
 from flask_restful import Resource
-from ....shared.tools.minio_client import MinioClient
+
+from tools import MinioClient
 
 
 class API(Resource):
