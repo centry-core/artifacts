@@ -2,7 +2,9 @@ from flask import send_file
 from io import BytesIO
 
 from flask_restful import Resource
-from ....shared.tools.minio_client import MinioClient
+# from ....shared.tools.minio_client import MinioClient
+
+from tools import MinioClient
 
 
 class API(Resource):

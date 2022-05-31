@@ -3,8 +3,10 @@ from flask import request
 from hurry.filesize import size
 
 from flask_restful import Resource
-from ....shared.tools.minio_client import MinioClient
-from ....shared.tools.api_tools import build_req_parser, upload_file
+# from ....shared.tools.minio_client import MinioClient
+# from ....shared.tools.api_tools import build_req_parser, upload_file
+
+from tools import MinioClient, api_tools
 
 
 class API(Resource):
@@ -26,7 +28,7 @@ class API(Resource):
     def post(self, project_id: int, bucket: str):
         project = self.module.context.rpc_manager.call.project_get_or_404(project_id=project_id)
         if "file" in request.files:
-            upload_file(bucket, request.files["file"], project)
+            api_tools.upload_file(bucket, request.files["file"], project)
         return {"message": "Done", "code": 200}
 
     def delete(self, project_id: int, bucket: str):
