@@ -37,6 +37,7 @@ class API(Resource):
         if not args.get("fname[]"):
             MinioClient(project=project).remove_bucket(bucket)
         else:
-            for filename in args.get("fname[]", ()) or ():
-                MinioClient(project=project).remove_file(bucket, filename)
+            # TODO add ability to remove several files
+            MinioClient(project=project).remove_file(bucket, args.get("fname[]"))
         return {"message": "Deleted", "code": 200}
+
