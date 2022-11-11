@@ -20,6 +20,6 @@ class API(Resource):
             file = minio_client.download_file(results.bucket_name, filename)
             print(file)
             print(BytesIO(file).getvalue())
-            return send_file(BytesIO(file), attachment_filename=filename)
+            return send_file(BytesIO(file), download_name=filename, as_attachment=True)
         except:
             abort(404)

@@ -22,6 +22,6 @@ class API(Resource):
         bucket_name = str(test_data["name"]).replace("_", "").replace(" ", "").lower()
         try:
             file = minio_client.download_file(bucket_name, filename)
-            return send_file(BytesIO(file), attachment_filename=filename)
+            return send_file(BytesIO(file), download_name=filename, as_attachment=True)
         except:
             abort(404)
