@@ -19,7 +19,7 @@ class API(Resource):
     def get(self, project_id: int, bucket: str, filename: str):
         project = self.module.context.rpc_manager.call.project_get_or_404(project_id=project_id)
         fobj = MinioClient(project).download_file(bucket, filename)
-        return send_file(BytesIO(fobj), attachment_filename=filename)
+        return send_file(BytesIO(fobj), download_name=filename, as_attachment=True)
 
     def delete(self, project_id: int, bucket: str, filename: str):
         project = self.module.context.rpc_manager.call.project_get_or_404(project_id=project_id)
