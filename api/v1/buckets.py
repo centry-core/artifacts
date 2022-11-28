@@ -22,9 +22,14 @@ class API(Resource):
         c = MinioClient(project)
         buckets = c.list_bucket()
         rows = []
+        total_size = 0
         for bucket in buckets:
-            rows.append(dict(name=bucket, size=size(c.get_bucket_size(bucket))))
-        return {"total": len(buckets), "rows": rows}
+            bucket_size = c.get_bucket_size(bucket)
+            total_size += bucket_size
+            rows.append(dict(name=bucket, 
+                             size=size(bucket_size),
+                             id=f"p--{project_id}.{bucket}"))
+        return {"total": len(buckets), "total_size": size(total_size), "rows": rows}, 200
 
     def post(self, project_id: int):
         args = request.json
@@ -43,12 +48,14 @@ class API(Resource):
             days = time_delta.days
             if data_retention_limit != -1 and days > data_retention_limit:
                 raise Forbidden(description="The data retention limit allowed in the project has been exceeded")
-        created = minio_client.create_bucket(bucket)
-        if created and days:
+        response = minio_client.create_bucket(bucket)
+        if isinstance(response, dict) and response['Location'] and days:
             minio_client.configure_bucket_lifecycle(bucket=bucket, days=days)
-        return {"message": "Created", "code": 200}
+            return {"message": "Created", "id": response['Location'].lstrip('/')}, 200
+        else:
+            return {"message": response}, 400
 
     def delete(self, project_id: int):
         project = self.module.context.rpc_manager.call.project_get_or_404(project_id=project_id)
         MinioClient(project=project).remove_bucket(request.args["name"])
-        return {"message": "Deleted", "code": 200}
+        return {"message": "Deleted"}, 200

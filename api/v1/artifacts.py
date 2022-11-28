@@ -27,17 +27,19 @@ class API(Resource):
 
     def post(self, project_id: int, bucket: str):
         project = self.module.context.rpc_manager.call.project_get_or_404(project_id=project_id)
+        c = MinioClient(project=project)
         if "file" in request.files:
             api_tools.upload_file(bucket, request.files["file"], project)
-        return {"message": "Done", "code": 200}
+        return {"message": "Done", "size": c.get_bucket_size(bucket)}, 200
 
     def delete(self, project_id: int, bucket: str):
         args = request.args
         project = self.module.context.rpc_manager.call.project_get_or_404(project_id=project_id)
+        c = MinioClient(project=project)
         if not args.get("fname[]"):
-            MinioClient(project=project).remove_bucket(bucket)
+            c.remove_bucket(bucket)
         else:
-            # TODO add ability to remove several files
-            MinioClient(project=project).remove_file(bucket, args.get("fname[]"))
-        return {"message": "Deleted", "code": 200}
+            for fname in args.getlist("fname[]"):
+                c.remove_file(bucket, fname)
+        return {"message": "Deleted", "size": c.get_bucket_size(bucket)}, 200
 
