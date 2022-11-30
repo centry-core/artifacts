@@ -20,17 +20,22 @@ class API(Resource):
     def get(self, project_id: int, bucket: str):
         project = self.module.context.rpc_manager.call.project_get_or_404(project_id=project_id)
         c = MinioClient(project)
+        try:
+            lifecycle = c.get_bucket_lifecycle(bucket)
+            days = lifecycle["Rules"][0]['Expiration']['Days']
+        except Exception:
+            days = None
         files = c.list_files(bucket)
         for each in files:
             each["size"] = size(each["size"])
-        return {"total": len(files), "rows": files}
+        return {"retention_policy": days, "total": len(files), "rows": files}
 
     def post(self, project_id: int, bucket: str):
         project = self.module.context.rpc_manager.call.project_get_or_404(project_id=project_id)
         c = MinioClient(project=project)
         if "file" in request.files:
             api_tools.upload_file(bucket, request.files["file"], project)
-        return {"message": "Done", "size": c.get_bucket_size(bucket)}, 200
+        return {"message": "Done", "size": size(c.get_bucket_size(bucket))}, 200
 
     def delete(self, project_id: int, bucket: str):
         args = request.args
@@ -41,5 +46,5 @@ class API(Resource):
         else:
             for fname in args.getlist("fname[]"):
                 c.remove_file(bucket, fname)
-        return {"message": "Deleted", "size": c.get_bucket_size(bucket)}, 200
+        return {"message": "Deleted", "size": size(c.get_bucket_size(bucket))}, 200
 
