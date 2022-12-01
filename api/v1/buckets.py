@@ -22,19 +22,14 @@ class API(Resource):
         c = MinioClient(project)
         buckets = c.list_bucket()
         rows = []
-        total_size = 0
         for bucket in buckets:
             bucket_size = c.get_bucket_size(bucket)
-            total_size += bucket_size
-            response = c.get_bucket_tags(bucket)
-            tags = {tag['Key']: tag['Value'] for tag in response['TagSet']} if response else {}
             rows.append(dict(name=bucket, 
                              size=size(bucket_size),
-                             id=f"p--{project_id}.{bucket}", 
-                             tags=tags
+                             id=f"p--{project_id}.{bucket}"
                              ), 
                         )
-        return {"total": len(buckets), "total_size": size(total_size), "rows": rows}, 200
+        return {"total": len(buckets), "rows": rows}, 200
 
     def post(self, project_id: int):
         args = request.json
