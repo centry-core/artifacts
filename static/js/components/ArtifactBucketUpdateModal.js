@@ -1,8 +1,8 @@
-const ArtifactBucketModal = {
+const ArtifactBucketUpdateModal = {
     components: {
         'input-stepper': InputStepper,
     },
-    props: ['bucket'],
+    props: ['selectedBucket'],
     data() {
         return {
             bucketData: {
@@ -17,6 +17,13 @@ const ArtifactBucketModal = {
         }
     },
     mounted() {
+        const vm = this;
+        $("#bucketUpdateModal").on("show.bs.modal", function (e) {
+            console.log(vm.selectedBucket)
+            vm.fetchBucket().then((bucket) => {
+                console.log(bucket)
+            })
+        });
         $('#selectRetention').on('change', (e) => {
             this.bucketData.retention = e.target.value;
         })
@@ -39,9 +46,16 @@ const ArtifactBucketModal = {
         setYear(val) {
             this.expiration = val;
         },
+        async fetchBucket() {
+            // TODO rewrite session
+            const res = await fetch (`/api/v1/artifacts/artifacts/${this.selectedBucket.id}`,{
+                method: 'GET',
+            })
+            return res.json();
+        },
         saveBucket() {
             this.applyClicked = true;
-            // if (this.isValidBucket) {
+            if (this.isValidBucket) {
                 this.isLoading = true;
                 fetch(`/api/v1/artifacts/buckets/${getSelectedProjectId()}`,{
                     method: 'POST',
@@ -64,7 +78,7 @@ const ArtifactBucketModal = {
                     showNotify('ERROR', err);
                     console.log(err)
                 })
-            // }
+            }
         },
         hasError(value) {
             return value.length > 0;
@@ -74,7 +88,7 @@ const ArtifactBucketModal = {
         },
     },
     template: `
-        <div class="modal modal-small fixed-left fade shadow-sm" tabindex="-1" role="dialog" id="bucketModal">
+        <div class="modal modal-small fixed-left fade shadow-sm" tabindex="-1" role="dialog" id="bucketUpdateModal">
             <div class="modal-dialog modal-dialog-aside" role="document">
                 <div class="modal-content">
                     <div class="modal-header">

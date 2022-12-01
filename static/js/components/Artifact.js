@@ -2,29 +2,29 @@ const Artifact = {
     props: ['session'],
     components: {
         'artifact-bucket-modal': ArtifactBucketModal,
+        'artifact-bucket-update-modal': ArtifactBucketUpdateModal,
         'artifact-files-table': ArtifactFilesTable,
         'artifact-bucket-aside': ArtifactBucketAside,
         'artifact-confirm-modal': ArtifactConfirmModal,
     },
     data() {
         return {
-            selectedBucked: null,
+            selectedBucket: {
+                name: null,
+            },
             selectedBucketRowIndex: null,
             loadingDelete: false,
             isInitDataFetched: false,
             showConfirm: false,
+            bucketCount: 0,
         }
     },
     mounted() {
         const vm = this;
         this.fetchBuckets().then(data => {
             $("#bucket-table").bootstrapTable('append', data.rows);
-            $('#bucket-table').on('click', 'tbody tr:not(.no-records-found)', function(event) {
-                vm.selectedBucketRowIndex = +this.getAttribute('data-index');
-                vm.selectedBucked = this.childNodes[vm.getBucketNameCallIndex(this)].innerHTML;
-                $(this).addClass('highlight').siblings().removeClass('highlight');
-                vm.refreshArtifactTable(vm.selectedBucked);
-            });
+            this.setBucketEvent(data.rows)
+            this.bucketCount = data.rows.length;
             this.isInitDataFetched = true;
             if (data.rows.length > 0) {
                 this.selectFirstBucket();
@@ -32,13 +32,23 @@ const Artifact = {
             return data.rows
         }).then((rows) => {
             if (rows.length > 0) {
-                this.fetchArtifacts(vm.selectedBucked).then(data => {
+                this.fetchArtifacts(vm.selectedBucket.name).then(data => {
                     $("#artifact-table").bootstrapTable('append', data.rows);
                 })
             }
         })
     },
     methods: {
+        setBucketEvent(bucketList) {
+            const vm = this;
+            $('#bucket-table').on('click', 'tbody tr:not(.no-records-found)', function(event) {
+                const selectedUniqId = this.getAttribute('data-uniqueid');
+                vm.selectedBucket = bucketList.find(row => row.id === selectedUniqId);
+                $(this).addClass('highlight').siblings().removeClass('highlight');
+                vm.refreshArtifactTable(vm.selectedBucket.name);
+                this.tableData = this.taskResults[vm.selectedBucket.name]
+            });
+        },
         async fetchArtifacts(bucket) {
             const res = await fetch(`/api/v1/artifacts/artifacts/${getSelectedProjectId()}/${bucket}`, {
                 method: 'GET',
@@ -57,9 +67,17 @@ const Artifact = {
                 $("#artifact-table").bootstrapTable('load', data.rows);
             })
         },
-        refreshBucketTable() {
+        refreshBucketTable(bucketId = null) {
             this.fetchBuckets().then(data => {
                 $("#bucket-table").bootstrapTable('load', data.rows);
+                $('#bucket-table').off('click', 'tbody tr:not(.no-records-found)')
+                this.setBucketEvent(data.rows);
+                if (bucketId) {
+                    this.selectedBucket = data.rows.find(row => row.id === bucketId);
+                    $('#bucket-table').find(`[data-uniqueid='${bucketId}']`).addClass('highlight');
+                } else {
+                    this.selectFirstBucket();
+                }
             })
         },
         getBucketNameCallIndex(row) {
@@ -79,27 +97,32 @@ const Artifact = {
                     const firstRow = $(item);
                     firstRow.addClass('highlight');
                     vm.selectedBucketRowIndex = 0;
-                    vm.selectedBucked = this.childNodes[vm.getBucketNameCallIndex(this)].innerHTML;
+                    vm.selectedBucket = $('#bucket-table').bootstrapTable('getData')[0];
                 }
             })
         },
-        refresh() {
-            this.refreshBucketTable();
-            this.refreshArtifactTable(this.selectedBucked, true);
+        refresh(newSize) {
+            this.selectedBucket.size = newSize;
+            $('#bucket-table').bootstrapTable('updateRow', {
+                index: this.selectedBucketRowIndex,
+                row: {
+                    size: newSize,
+                }
+            })
+            $('#bucket-table').find(`[data-uniqueid='${this.selectedBucket.id}']`).addClass('highlight');
+            this.refreshArtifactTable(this.selectedBucket.name, true);
         },
         switcherDeletingBucket() {
             if (this.bucketDeletingType === 'single') {
-                console.log('single')
                 this.deleteBucket()
             } else {
-                console.log('multy')
                 this.deleteSelectedBuckets()
             }
             // this.bucketDeletingType === 'single' ? this.deleteBucket() : this.deleteSelectedBuckets();
         },
         deleteBucket() {
             this.loadingDelete = true;
-            fetch(`/api/v1/artifacts/buckets/${getSelectedProjectId()}?name=${this.selectedBucked}`, {
+            fetch(`/api/v1/artifacts/buckets/${getSelectedProjectId()}?name=${this.selectedBucket.name}`, {
                 method: 'DELETE',
             }).then((data) => {
                 this.refreshBucketTable();
@@ -135,16 +158,21 @@ const Artifact = {
         <main class="d-flex align-items-start justify-content-center mb-3">
             <artifact-bucket-aside
                 @open-confirm="openConfirm"
+                :bucket-count="bucketCount"
+                :selected-bucket="selectedBucket"
                 :selected-bucket-row-index="selectedBucketRowIndex"
                 :is-init-data-fetched="isInitDataFetched">
             </artifact-bucket-aside>
             <artifact-files-table
-                :selected-bucked="selectedBucked"
+                :selected-bucket="selectedBucket"
                 @refresh="refresh">
             </artifact-files-table>
             <artifact-bucket-modal
                 @refresh-bucket="refreshBucketTable">
             </artifact-bucket-modal>
+            <artifact-bucket-update-modal
+                :selected-bucket="selectedBucket">
+            </artifact-bucket-update-modal>
             <artifact-confirm-modal
                 v-if="showConfirm"
                 @close-confirm="openConfirm"
