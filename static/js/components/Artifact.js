@@ -46,7 +46,6 @@ const Artifact = {
                 vm.selectedBucket = bucketList.find(row => row.id === selectedUniqId);
                 $(this).addClass('highlight').siblings().removeClass('highlight');
                 vm.refreshArtifactTable(vm.selectedBucket.name);
-                this.tableData = this.taskResults[vm.selectedBucket.name]
             });
         },
         async fetchArtifacts(bucket) {
@@ -70,6 +69,7 @@ const Artifact = {
         refreshBucketTable(bucketId = null) {
             this.fetchBuckets().then(data => {
                 $("#bucket-table").bootstrapTable('load', data.rows);
+                this.bucketCount = data.rows.length;
                 $('#bucket-table').off('click', 'tbody tr:not(.no-records-found)')
                 this.setBucketEvent(data.rows);
                 if (bucketId) {
@@ -113,12 +113,7 @@ const Artifact = {
             this.refreshArtifactTable(this.selectedBucket.name, true);
         },
         switcherDeletingBucket() {
-            if (this.bucketDeletingType === 'single') {
-                this.deleteBucket()
-            } else {
-                this.deleteSelectedBuckets()
-            }
-            // this.bucketDeletingType === 'single' ? this.deleteBucket() : this.deleteSelectedBuckets();
+            this.bucketDeletingType === 'single' ? this.deleteBucket() : this.deleteSelectedBuckets();
         },
         deleteBucket() {
             this.loadingDelete = true;
@@ -137,13 +132,12 @@ const Artifact = {
                 .map(bucket => bucket.name.toLowerCase());
             const urls = selectedBucketList.map(name => `/api/v1/artifacts/buckets/${getSelectedProjectId()}?name=${name}`)
             this.loadingDelete = true;
-            Promise.all([urls.map(url => {
-                return fetch(url, {
-                    method: 'DELETE',
-                })
-            })]).then(() => {
+            let chainPromises = Promise.resolve();
+            urls.forEach((url) => {
+                chainPromises = chainPromises.then(() => fetch(url, { method: 'DELETE' }))
+            });
+            chainPromises.finally(() => {
                 this.refreshBucketTable();
-            }).finally(() => {
                 this.loadingDelete = false;
                 this.showConfirm = !this.showConfirm;
                 showNotify('SUCCESS', 'Buckets delete.');
