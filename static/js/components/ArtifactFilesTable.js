@@ -76,7 +76,7 @@ const ArtifactFilesTable = {
                             <th scope="col" data-checkbox="true"></th>
                             <th scope="col" data-sortable="true" data-field="name" class="w-100">NAME</th>
                             <th scope="col" data-sortable="true" data-cell-style="nameStyle" data-field="size" data-sorter="filesizeSorter">SIZE</th>
-                            <th scope="col" data-sortable="true" data-cell-style="nameStyle" data-field="modified">LAST UPDATE</th>
+                            <th scope="col" data-sortable="true" data-cell-style="styleNoWrapText" data-field="modified">LAST UPDATE</th>
                         </tr>
                     </thead>
                     <tbody>

@@ -1,4 +1,7 @@
 const ArtifactBucketAside = {
+    components: {
+        'artifact-storage': ArtifactStorage,
+    },
     props: ['isInitDataFetched', 'selectedBucketRowIndex', 'selectedBucket', 'bucketCount'],
     data() {
         return {
@@ -10,7 +13,7 @@ const ArtifactBucketAside = {
     computed: {
         isAnyBucketSelected() {
             return this.checkedBucketsList.length > 0;
-        }
+        },
     },
     watch: {
         isInitDataFetched() {
@@ -91,7 +94,7 @@ const ArtifactBucketAside = {
                             <th data-checkbox="true" data-field="select"></th>
                             <th scope="col" data-sortable="true" data-field="name" class="bucket-name">NAME</th>
                             <th scope="col" data-sortable="true" data-field="size" data-sorter="filesizeSorter" class="bucket-size">SIZE</th>
-                            <th scope="col" data-cell-style="nameStyle"
+                            <th scope="col"
                                 data-formatter='<div class="d-none">
                                     <button class="btn btn-default btn-xs btn-table btn-icon__xs bucket_delete"><i class="fas fa-trash-alt"></i></button>
                                     <button class="btn btn-default btn-xs btn-table btn-icon__xs bucket_setting"><i class="fas fa-gear"></i></button>
@@ -100,59 +103,17 @@ const ArtifactBucketAside = {
                             </th>
                         </tr>
                     </thead>
-                    <tbody style="height: 315px">
+                    <tbody style="height: 303px">
                     </tbody>
                 </table>
                 <div class="p-3">
                     <span class="font-h5 text-gray-600">{{ bucketCount }} items</span>
                 </div>
             </div>
+            <artifact-storage
+                :bucketCount="bucketCount"
+                :key="bucketCount">
+            </artifact-storage>
         </aside>
     `
-}
-
-var bucketEvents = {
-    "click .bucket_delete": function (e, value, row, index) {
-        e.stopPropagation();
-        const vm = vueVm.registered_components.artifact
-        vm.openConfirm('single');
-    },
-    "click .bucket_setting": function (e, value, row, index) {
-        e.stopPropagation();
-        $('#bucketUpdateModal').modal('show');
-    }
-}
-
-function filesizeSorter(a, b) {
-    let a_number = retnum(a);
-    let b_number = retnum(b);
-    a = a_number;
-    b = b_number;
-    if (a > b) return 1;
-    if (a < b) return -1;
-    return 0;
-}
-
-function retnum(number) {
-    let num = number.replace(/[^0-9]/g, '');
-    const fileSizeName = number.replace(/[^a-zA-Z]+/g, '').toUpperCase();
-
-    num = parseInt(num, 10);
-
-    switch (fileSizeName) {
-        case "K":
-            num = num * 1024;
-            break;
-        case "M":
-            num = num * Math.pow(1024, 2);
-            break;
-        case "G":
-            num = num * Math.pow(1024, 3);
-            break;
-        case "T":
-            num = num * Math.pow(1024, 4);
-            break;
-    }
-
-    return num;
 }
