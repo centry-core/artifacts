@@ -30,7 +30,7 @@ class API(Resource):
         files = c.list_files(bucket)
         for each in files:
             each["size"] = size(each["size"])
-        return {"retention_policy": retention_policy, 'days': lifecycle["Rules"][0]['Expiration']['Days'], "total": len(files), "rows": files}
+        return {"retention_policy": retention_policy, "total": len(files), "rows": files}
 
     def post(self, project_id: int, bucket: str):
         project = self.module.context.rpc_manager.call.project_get_or_404(project_id=project_id)
