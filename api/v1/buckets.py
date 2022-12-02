@@ -24,7 +24,10 @@ class API(Resource):
         rows = []
         for bucket in buckets:
             bucket_size = c.get_bucket_size(bucket)
+            response = c.get_bucket_tags(bucket)
+            tags = {tag['Key']: tag['Value'] for tag in response['TagSet']} if response else {}
             rows.append(dict(name=bucket, 
+                             tags=tags,
                              size=size(bucket_size),
                              id=f"p--{project_id}.{bucket}"
                              ), 
