@@ -34,6 +34,8 @@ const Artifact = {
             if (rows.length > 0) {
                 this.fetchArtifacts(vm.selectedBucket.name).then(data => {
                     $("#artifact-table").bootstrapTable('append', data.rows);
+                    $('#filesRetentionPolicy')
+                        .text(`${data.retention_policy.expiration_value} ${data.retention_policy.expiration_measure}`)
                 })
             }
         })
@@ -63,6 +65,8 @@ const Artifact = {
         },
         refreshArtifactTable(bucked) {
             this.fetchArtifacts(bucked).then(data => {
+                $('#filesRetentionPolicy')
+                    .text(`${data.retention_policy.expiration_value} ${data.retention_policy.expiration_measure}`)
                 $("#artifact-table").bootstrapTable('load', data.rows);
             })
         },
@@ -72,9 +76,11 @@ const Artifact = {
                 this.bucketCount = data.rows.length;
                 $('#bucket-table').off('click', 'tbody tr:not(.no-records-found)')
                 this.setBucketEvent(data.rows);
+                console.log(bucketId)
                 if (bucketId) {
                     this.selectedBucket = data.rows.find(row => row.id === bucketId);
                     $('#bucket-table').find(`[data-uniqueid='${bucketId}']`).addClass('highlight');
+                    this.refreshArtifactTable(this.selectedBucket.name)
                 } else {
                     this.selectFirstBucket();
                 }

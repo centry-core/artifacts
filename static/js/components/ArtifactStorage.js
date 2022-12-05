@@ -91,3 +91,5 @@ const ArtifactStorage = {
     </div>
     `
 }
+
+register_component('artifact-storage', ArtifactStorage);

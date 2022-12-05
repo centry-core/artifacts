@@ -11,80 +11,59 @@ const ArtifactBucketUpdateModal = {
                 expiration: 1,
                 storage: null,
             },
-            applyClicked: false,
-            isValidBucket: false,
             isLoading: false,
         }
     },
     mounted() {
         const vm = this;
         $("#bucketUpdateModal").on("show.bs.modal", function (e) {
-            console.log(vm.selectedBucket)
             vm.fetchBucket().then((bucket) => {
-                console.log(bucket)
+                vm.bucketData.name = vm.selectedBucket.name;
+                vm.bucketData.retention = bucket.retention_policy.expiration_measure;
+                vm.bucketData.expiration = bucket.retention_policy.expiration_value;
+                // TODO
+                console.log( vm.bucketData.retention)
+                $('#retentionBlock .filter-option-inner-inner')
+                    .text(vm.bucketData.retention.charAt(0).toUpperCase() + vm.bucketData.retention.slice(1));
             })
         });
-        $('#selectRetention').on('change', (e) => {
+        $('#selectUpdatedRetention').on('change', (e) => {
             this.bucketData.retention = e.target.value;
         })
     },
-    watch: {
-        bucketData: {
-            handler: function () {
-                this.$nextTick(() => {
-                    const arr = []
-                    $('#bucketFields .need-validation').each(function (index, cell) {
-                        arr.push(cell.getAttribute('data-valid'));
-                    })
-                    this.isValidBucket = arr.every(elem => elem === 'true')
-                });
-            },
-            deep: true
-        }
-    },
     methods: {
         setYear(val) {
-            this.expiration = val;
+            this.bucketData.expiration = val;
         },
         async fetchBucket() {
             // TODO rewrite session
-            const res = await fetch (`/api/v1/artifacts/artifacts/${this.selectedBucket.id}`,{
+            const res = await fetch (`/api/v1/artifacts/artifacts/${getSelectedProjectId()}/${this.selectedBucket.name}`,{
                 method: 'GET',
             })
             return res.json();
         },
         saveBucket() {
-            this.applyClicked = true;
-            if (this.isValidBucket) {
-                this.isLoading = true;
-                fetch(`/api/v1/artifacts/buckets/${getSelectedProjectId()}`,{
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json', dataType: 'json'},
-                    body: JSON.stringify({
-                        "name": this.bucketData.name,
-                        "expiration_measure": (this.bucketData.retention).toLowerCase(),
-                        "expiration_value": String(this.bucketData.expiration),
-                    })
-                }).then((response) => response.json())
-                .then(data => {
-                    this.isLoading = false;
-                    this.applyClicked = false;
-                    this.bucketData.name = '';
-                    $('#bucketModal').modal('hide');
-                    this.$emit('refresh-bucket', data.id);
-                    showNotify('SUCCESS', 'Bucket created.');
-                }).catch(err => {
-                    this.isLoading = false;
-                    showNotify('ERROR', err);
-                    console.log(err)
+            this.isLoading = true;
+            fetch(`/api/v1/artifacts/buckets/${getSelectedProjectId()}`,{
+                method: 'PUT',
+                headers: {'Content-Type': 'application/json', dataType: 'json'},
+                body: JSON.stringify({
+                    "name": this.bucketData.name,
+                    "expiration_measure": (this.bucketData.retention).toLowerCase(),
+                    "expiration_value": String(this.bucketData.expiration),
                 })
-            }
-        },
-        hasError(value) {
-            return value.length > 0;
-        },
-        showError(value) {
-            return this.applyClicked ? value.length > 0 : true;
+            }).then((response) => response.json())
+            .then(data => {
+                this.isLoading = false;
+                this.bucketData.name = '';
+                $('#bucketUpdateModal').modal('hide');
+                this.$emit('refresh-bucket', data.id);
+                showNotify('SUCCESS', 'Bucket updated.');
+            }).catch(err => {
+                this.isLoading = false;
+                showNotify('ERROR', err);
+                console.log(err)
+            })
         },
     },
     template: `
@@ -94,7 +73,7 @@ const ArtifactBucketUpdateModal = {
                     <div class="modal-header">
                         <div class="row w-100">
                             <div class="col">
-                                <h2>Create bucket</h2>
+                                <h2>Update bucket</h2>
                             </div>
                             <div class="col-xs d-flex">
                                 <button type="button" class="btn  btn-secondary mr-2" data-dismiss="modal" aria-label="Close">
@@ -103,48 +82,39 @@ const ArtifactBucketUpdateModal = {
                                 <button type="button" 
                                     class="btn btn-basic d-flex align-items-center"
                                     @click="saveBucket"
-                                >Save<i v-if="isLoading" class="preview-loader__white ml-2"></button>
+                                >Save<i v-if="isLoading" class="preview-loader__white ml-2"></i></button>
                             </div>
                         </div>
                     </div>
                     <div class="modal-body">
                         <div class="section">
-                            <div class="row" id="bucketFields">
-                                <div class="custom-input need-validation mb-3 w-100" :class="{'invalid-input': !showError(bucketData.name)}"
-                                    :data-valid="hasError(bucketData.name)">
+                            <div class="row">
+                                <div class="custom-input mb-3 w-100">
                                     <label for="BucketName" class="font-weight-bold mb-1">Name</label>
                                     <input
                                         id="BucketName"
                                         type="text"
                                         v-model="bucketData.name"
+                                        disabled
                                         placeholder="Bucket name">
                                 </div>
                                 <div class="row align-items-end mb-3">
-                                    <div class="custom-input mr-2">
+                                    <div class="custom-input mr-2" id="retentionBlock">
                                         <label class="font-weight-bold mb-0">Retention policy</label>
                                         <p class="custom-input_desc mb-2">Description</p>
-                                        <select class="selectpicker bootstrap-select__b" id="selectRetention" data-style="btn">
-                                            <option>Days</option>
-                                            <option>Years</option>
-                                            <option>Months</option>
-                                            <option>Weeks</option>
+                                        <select class="selectpicker bootstrap-select__b" id="selectUpdatedRetention" data-style="btn">
+                                            <option value="days">Days</option>
+                                            <option value="years">Years</option>
+                                            <option value="months">Months</option>
+                                            <option value="weeks">Weeks</option>
                                         </select>
                                     </div>
                                     <div>
                                         <input-stepper 
-                                            :default-value="1"
+                                            :default-value="bucketData.expiration"
                                             @change="setYear"
                                         ></input-stepper>
                                     </div>
-                                </div>
-                                <div class="custom-input w-100">
-                                    <label for="excriptionKey" class="font-weight-bold mb-0">Storage encryption</label>
-                                    <p class="custom-input_desc mb-2">Description</p>
-                                    <input
-                                        id="excriptionKey"
-                                        type="text"
-                                        v-model="bucketData.storage"
-                                        placeholder="Excription key">
                                 </div>
                             </div>
                         </div>
