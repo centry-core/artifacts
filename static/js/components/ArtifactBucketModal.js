@@ -37,11 +37,11 @@ const ArtifactBucketModal = {
     },
     methods: {
         setYear(val) {
-            this.expiration = val;
+            this.bucketData.expiration = val;
         },
         saveBucket() {
             this.applyClicked = true;
-            // if (this.isValidBucket) {
+            if (this.isValidBucket) {
                 this.isLoading = true;
                 fetch(`/api/v1/artifacts/buckets/${getSelectedProjectId()}`,{
                     method: 'POST',
@@ -51,8 +51,13 @@ const ArtifactBucketModal = {
                         "expiration_measure": (this.bucketData.retention).toLowerCase(),
                         "expiration_value": String(this.bucketData.expiration),
                     })
-                }).then((response) => response.json())
-                .then(data => {
+                }).then((response) => {
+                    if (response.status === 200) {
+                        return response.json();
+                    } else if (response.status === 400){
+                        throw new Error('Bucket\'s name is exist!');
+                    }
+                }).then(data => {
                     this.isLoading = false;
                     this.applyClicked = false;
                     this.bucketData.name = '';
@@ -62,9 +67,8 @@ const ArtifactBucketModal = {
                 }).catch(err => {
                     this.isLoading = false;
                     showNotify('ERROR', err);
-                    console.log(err)
                 })
-            // }
+            }
         },
         hasError(value) {
             return value.length > 0;
@@ -89,7 +93,7 @@ const ArtifactBucketModal = {
                                 <button type="button" 
                                     class="btn btn-basic d-flex align-items-center"
                                     @click="saveBucket"
-                                >Save<i v-if="isLoading" class="preview-loader__white ml-2"></button>
+                                >Save<i v-if="isLoading" class="preview-loader__white ml-2"></i></button>
                             </div>
                         </div>
                     </div>
@@ -122,15 +126,6 @@ const ArtifactBucketModal = {
                                             @change="setYear"
                                         ></input-stepper>
                                     </div>
-                                </div>
-                                <div class="custom-input w-100">
-                                    <label for="excriptionKey" class="font-weight-bold mb-0">Storage encryption</label>
-                                    <p class="custom-input_desc mb-2">Description</p>
-                                    <input
-                                        id="excriptionKey"
-                                        type="text"
-                                        v-model="bucketData.storage"
-                                        placeholder="Excription key">
                                 </div>
                             </div>
                         </div>

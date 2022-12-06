@@ -23,6 +23,7 @@ const ArtifactFilesTable = {
                 processData: false,
                 success: (res) => {
                     this.$emit('refresh', res.size);
+                    vueVm.registered_components.storage.getData();
                 }
             });
         },
@@ -37,6 +38,7 @@ const ArtifactFilesTable = {
                     type: 'DELETE',
                     success: (res) => {
                         this.$emit('refresh', res.size);
+                        vueVm.registered_components.storage.getData();
                     }
                 });
             }
@@ -47,12 +49,10 @@ const ArtifactFilesTable = {
             <div class="row p-3">
                 <div class="col-4">
                     <h4>Bucket {{ selectedBucket.name }}</h4>   
+                    <p class="font-h6 font-weight-400">Retention policy - <span id="filesRetentionPolicy"></span></p>
                 </div>
                 <div class="col-8">
                     <div class="d-flex justify-content-end">
-                        <button type="button" class="btn btn-secondary btn-sm btn-icon__sm mr-2">
-                            <i class="fas fa-sync"></i>
-                        </button>
                         <button type="button" 
                             @click="deleteFiles"
                             class="btn btn-secondary btn-sm btn-icon__sm mr-2">
