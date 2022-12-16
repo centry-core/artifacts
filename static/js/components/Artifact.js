@@ -35,7 +35,7 @@ const Artifact = {
                 this.fetchArtifacts(vm.selectedBucket.name).then(data => {
                     $("#artifact-table").bootstrapTable('append', data.rows);
                     $('#filesRetentionPolicy')
-                        .text(`${data.retention_policy.expiration_value} ${data.retention_policy.expiration_measure}`)
+                        .text(`${data.retention_policy?.expiration_value} ${data.retention_policy?.expiration_measure}`)
                 })
             }
         })
@@ -66,7 +66,7 @@ const Artifact = {
         refreshArtifactTable(bucked) {
             this.fetchArtifacts(bucked).then(data => {
                 $('#filesRetentionPolicy')
-                    .text(`${data.retention_policy.expiration_value} ${data.retention_policy.expiration_measure}`)
+                    .text(`${data.retention_policy?.expiration_value} ${data.retention_policy?.expiration_measure}`)
                 $("#artifact-table").bootstrapTable('load', data.rows);
             })
         },
