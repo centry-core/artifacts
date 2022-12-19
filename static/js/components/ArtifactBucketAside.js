@@ -2,12 +2,11 @@ const ArtifactBucketAside = {
     components: {
         'artifact-storage': ArtifactStorage,
     },
-    props: ['isInitDataFetched', 'selectedBucketRowIndex', 'selectedBucket', 'bucketCount'],
+    props: ['isInitDataFetched', 'selectedBucketRowIndex', 'selectedBucket', 'bucketCount', 'checkedBucketsList'],
     data() {
         return {
             canSelectItems: false,
             loadingDelete: false,
-            checkedBucketsList: [],
             isShowSearch: false,
         }
     },
@@ -24,6 +23,7 @@ const ArtifactBucketAside = {
     mounted() {
         const vm = this;
         $('#bucketFilter').on('changed.bs.select', function ({ target: { value }}) {
+            vm.$emit('update-bucket-list', []);
             $('#bucket-table').bootstrapTable('filterBy', {
                 tag: value.toLowerCase() ?? 'fuck'
             }, {
@@ -39,6 +39,7 @@ const ArtifactBucketAside = {
         });
 
         $('#bucketSearch').on('input', function ({ target: { value }}) {
+            vm.$emit('update-bucket-list', []);
             $('#bucket-table').bootstrapTable('filterBy', {
                 name: value.toLowerCase()
             }, {
@@ -56,18 +57,21 @@ const ArtifactBucketAside = {
         setBucketEvents() {
             const vm = this;
             $('#bucket-table').on('check.bs.table', (row, $element) => {
-                this.checkedBucketsList.push($element.name);
+                const buckets = [...this.checkedBucketsList, $element.name]
+                this.$emit('update-bucket-list', buckets);
             });
             $('#bucket-table').on('uncheck.bs.table', (row, $element) => {
-                this.checkedBucketsList = this.checkedBucketsList.filter(bucket => {
+                const buckets = this.checkedBucketsList.filter(bucket => {
                     return $element.name !== bucket
                 })
+                this.$emit('update-bucket-list', buckets);
             });
             $('#bucket-table').on('uncheck-all.bs.table', (row, $element) => {
-                this.checkedBucketsList = [];
+                this.$emit('update-bucket-list', []);
             });
             $('#bucket-table').on('check-all.bs.table', (rowsAfter, rowsBefore) => {
-                this.checkedBucketsList = rowsBefore.map(row => row.name);
+                const buckets = rowsBefore.map(row => row.name);
+                this.$emit('update-bucket-list', buckets);
             });
             $('#bucket-table').on('sort.bs.table', function (name, order) {
                 vm.$nextTick(() => {
@@ -77,7 +81,8 @@ const ArtifactBucketAside = {
         },
         switchSelectItems() {
             this.canSelectItems = !this.canSelectItems;
-            const action = this.canSelectItems ? 'hideColumn' : 'showColumn';
+            const action = this.canSelectItems ? 'showColumn' : 'hideColumn';
+            console.log(action)
             $('#bucket-table').bootstrapTable(action, 'select');
             document.getElementById("bucket-table")
                 .rows[this.selectedBucketRowIndex + 1]
@@ -86,7 +91,7 @@ const ArtifactBucketAside = {
     },
     template: `
         <aside class="m-3 card card-table-sm" style="width: 450px">
-            <div class="row p-3">
+            <div class="row p-4">
                 <div class="col-4">
                     <h4>Bucket</h4>
                 </div>
@@ -115,7 +120,7 @@ const ArtifactBucketAside = {
                     </div>
                 </div>
             </div>
-            <div class="w-100 card p-3">
+            <div class="w-100 card px-4 pb-3" style="box-shadow: none">
                 <div v-show="isShowSearch" class="custom-input custom-input_search position-relative mb-3">
                     <input
                         id="bucketSearch"
@@ -139,10 +144,10 @@ const ArtifactBucketAside = {
                     data-sort-order="asc"
                     data-pagination-pre-text="<img src='/design-system/static/assets/ico/arrow_left.svg'>"
                     data-pagination-next-text="<img src='/design-system/static/assets/ico/arrow_right.svg'>">
-                    <thead class="thead-light">
+                    <thead class="thead-light bg-transparent">
                         <tr>
                             <th data-visible="false" data-field="id">index</th>
-                            <th data-checkbox="true" data-field="select"></th>
+                            <th data-checkbox="true" data-visible="false" data-field="select"></th>
                             <th data-visible="false" data-field="tags"></th>
                             <th scope="col" data-sortable="true" data-field="name" class="bucket-name">NAME</th>
                             <th scope="col" data-sortable="true" data-field="size" data-sorter="filesizeSorter" class="bucket-size">SIZE</th>

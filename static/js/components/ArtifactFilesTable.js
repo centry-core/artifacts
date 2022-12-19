@@ -42,6 +42,26 @@ const ArtifactFilesTable = {
                     }
                 });
             }
+        },
+        deleteFile() {
+
+        },
+        downloadFile(fileName) {
+            $.ajax({
+                url: `/api/v1/artifacts/artifact/${getSelectedProjectId()}/${this.selectedBucket.name}/${fileName}`,
+                type: 'GET',
+                success: (data) => {
+                    const blob = new Blob([data], { type: "application/octetstream" });
+                    const url = window.URL || window.webkitURL;
+                    const link = url.createObjectURL(blob);
+                    const a = $("<a />");
+                    a.attr("download", fileName);
+                    a.attr("href", link);
+                    $("body").append(a);
+                    a[0].click();
+                    $("body").remove(a);
+                }
+            });
         }
     },
     template: `
@@ -77,6 +97,9 @@ const ArtifactFilesTable = {
                             <th scope="col" data-sortable="true" data-field="name" class="w-100">NAME</th>
                             <th scope="col" data-sortable="true" data-cell-style="nameStyle" data-field="size" data-sorter="filesizeSorter">SIZE</th>
                             <th scope="col" data-sortable="true" data-cell-style="styleNoWrapText" data-field="modified">LAST UPDATE</th>
+                            <th scope="col" data-field="actions" data-align="right" 
+                                data-formatter="filesFormatter.actions" 
+                                data-events="filesFormatter.events"></th>
                         </tr>
                     </thead>
                     <tbody>
@@ -86,3 +109,5 @@ const ArtifactFilesTable = {
         </div>
     `
 }
+
+register_component('artifact-files-table', ArtifactFilesTable);
