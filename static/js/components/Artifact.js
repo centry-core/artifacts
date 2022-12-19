@@ -70,6 +70,10 @@ const Artifact = {
                 $("#artifact-table").bootstrapTable('load', data.rows);
             })
         },
+        updateFilesRetentionPolicy(policy) {
+            $('#filesRetentionPolicy')
+                .text(`${policy.expiration} ${policy.retention}`)
+        },
         refreshBucketTable(bucketId = null) {
             this.fetchBuckets().then(data => {
                 $("#bucket-table").bootstrapTable('load', data.rows);
@@ -171,6 +175,7 @@ const Artifact = {
                 @refresh-bucket="refreshBucketTable">
             </artifact-bucket-modal>
             <artifact-bucket-update-modal
+                @refresh-policy="updateFilesRetentionPolicy"
                 :selected-bucket="selectedBucket">
             </artifact-bucket-update-modal>
             <artifact-confirm-modal

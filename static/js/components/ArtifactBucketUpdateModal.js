@@ -21,10 +21,8 @@ const ArtifactBucketUpdateModal = {
                 vm.bucketData.name = vm.selectedBucket.name;
                 vm.bucketData.retention = bucket.retention_policy.expiration_measure;
                 vm.bucketData.expiration = bucket.retention_policy.expiration_value;
-                // TODO
-                console.log( vm.bucketData.retention)
-                $('#retentionBlock .filter-option-inner-inner')
-                    .text(vm.bucketData.retention.charAt(0).toUpperCase() + vm.bucketData.retention.slice(1));
+                $('#selectUpdatedRetention').val(vm.bucketData.retention)
+                $('#selectUpdatedRetention').selectpicker('refresh');
             })
         });
         $('#selectUpdatedRetention').on('change', (e) => {
@@ -57,7 +55,7 @@ const ArtifactBucketUpdateModal = {
                 this.isLoading = false;
                 this.bucketData.name = '';
                 $('#bucketUpdateModal').modal('hide');
-                this.$emit('refresh-bucket', data.id);
+                this.$emit('refresh-policy', { retention: this.bucketData.retention, expiration: this.bucketData.expiration});
                 showNotify('SUCCESS', 'Bucket updated.');
             }).catch(err => {
                 this.isLoading = false;
