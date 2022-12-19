@@ -17,6 +17,7 @@ const Artifact = {
             isInitDataFetched: false,
             showConfirm: false,
             bucketCount: 0,
+            checkedBucketsList: [],
         }
     },
     mounted() {
@@ -151,23 +152,31 @@ const Artifact = {
                 this.loadingDelete = false;
                 this.showConfirm = !this.showConfirm;
                 showNotify('SUCCESS', 'Buckets delete.');
+
             })
         },
         openConfirm(type) {
             this.bucketDeletingType = type;
             this.showConfirm = !this.showConfirm;
         },
+        updateBucketList(buckets) {
+            this.checkedBucketsList = buckets;
+        }
     },
     template: ` 
         <main class="d-flex align-items-start justify-content-center mb-3">
             <artifact-bucket-aside
                 @open-confirm="openConfirm"
+                @update-bucket-list="updateBucketList"
+                :checked-buckets-list="checkedBucketsList"
                 :bucket-count="bucketCount"
                 :selected-bucket="selectedBucket"
                 :selected-bucket-row-index="selectedBucketRowIndex"
                 :is-init-data-fetched="isInitDataFetched">
             </artifact-bucket-aside>
             <artifact-files-table
+                @register="$root.register"
+                instance_name="artifactFiles"
                 :selected-bucket="selectedBucket"
                 @refresh="refresh">
             </artifact-files-table>
