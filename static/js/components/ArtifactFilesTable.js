@@ -43,8 +43,19 @@ const ArtifactFilesTable = {
                 });
             }
         },
-        deleteFile() {
-
+        deleteFile(fileName, index) {
+            $.ajax({
+                url: `/api/v1/artifacts/artifact/${getSelectedProjectId()}/${this.selectedBucket.name}/${fileName}`,
+                type: 'DELETE',
+                success: (res) => {
+                    $('#artifact-table').bootstrapTable('remove', {
+                        field: '$index',
+                        values: [index]
+                    })
+                    this.$emit('refresh', res.size);
+                    showNotify('SUCCESS', 'File delete.');
+                }
+            });
         },
         downloadFile(fileName) {
             $.ajax({

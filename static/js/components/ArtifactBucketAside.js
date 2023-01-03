@@ -14,6 +14,9 @@ const ArtifactBucketAside = {
         isAnyBucketSelected() {
             return this.checkedBucketsList.length > 0;
         },
+        responsiveTableHeight() {
+            return `${(window.innerHeight - 410)}px`;
+        }
     },
     watch: {
         isInitDataFetched() {
@@ -160,7 +163,7 @@ const ArtifactBucketAside = {
                             </th>
                         </tr>
                     </thead>
-                    <tbody style="height: 282px">
+                    <tbody :style="{'height': responsiveTableHeight}">
                     </tbody>
                 </table>
                 <div class="p-3">

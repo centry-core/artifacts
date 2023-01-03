@@ -34,7 +34,7 @@ var filesFormatter = {
     },
     events: {
         "click .file_delete": function (e, value, row, index) {
-            vueVm.registered_components.artifactFiles.deleteFile(row.name);
+            vueVm.registered_components.artifactFiles.deleteFile(row.name, index);
         },
         "click .file_download": function (e, value, row, index) {
             vueVm.registered_components.artifactFiles.downloadFile(row.name);
