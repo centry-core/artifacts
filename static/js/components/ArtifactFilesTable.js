@@ -57,23 +57,6 @@ const ArtifactFilesTable = {
                 }
             });
         },
-        downloadFile(fileName) {
-            $.ajax({
-                url: `/api/v1/artifacts/artifact/${getSelectedProjectId()}/${this.selectedBucket.name}/${fileName}`,
-                type: 'GET',
-                success: (data) => {
-                    const blob = new Blob([data], { type: "application/octetstream" });
-                    const url = window.URL || window.webkitURL;
-                    const link = url.createObjectURL(blob);
-                    const a = $("<a />");
-                    a.attr("download", fileName);
-                    a.attr("href", link);
-                    $("body").append(a);
-                    a[0].click();
-                    $("body").remove(a);
-                }
-            });
-        }
     },
     template: `
         <div class="card mt-3 mr-3 card-table-sm w-100" @dragover.prevent @drop.prevent>
