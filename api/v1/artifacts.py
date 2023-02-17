@@ -6,6 +6,7 @@ from flask_restful import Resource
 # from ....shared.tools.minio_client import MinioClient
 # from ....shared.tools.api_tools import build_req_parser, upload_file
 
+from pylon.core.tools import log
 from tools import MinioClient, api_tools
 
 
@@ -33,10 +34,13 @@ class API(Resource):
         return {"retention_policy": retention_policy, "total": len(files), "rows": files}
 
     def post(self, project_id: int, bucket: str):
+        is_create = request.args.get('create_if_not_exists', False)
         project = self.module.context.rpc_manager.call.project_get_or_404(project_id=project_id)
         c = MinioClient(project=project)
         if "file" in request.files:
-            api_tools.upload_file(bucket, request.files["file"], project)
+            api_tools.upload_file(
+                bucket, request.files["file"], project, create_if_not_exists=is_create 
+            )
         return {"message": "Done", "size": size(c.get_bucket_size(bucket))}, 200
 
     def delete(self, project_id: int, bucket: str):
