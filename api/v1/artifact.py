@@ -22,7 +22,7 @@ class API(Resource):
         try:
             return send_file(BytesIO(file), attachment_filename=filename)
         except TypeError:  # new flask
-            return send_file(BytesIO(file), download_name=filename, as_attachment=True)
+            return send_file(BytesIO(file), download_name=filename, as_attachment=False)
 
     def delete(self, project_id: int, bucket: str, filename: str):
         project = self.module.context.rpc_manager.call.project_get_or_404(project_id=project_id)
