@@ -34,7 +34,7 @@ class API(Resource):
         return {"retention_policy": retention_policy, "total": len(files), "rows": files}
 
     def post(self, project_id: int, bucket: str):
-        is_create = request.args.get('create_if_not_exists', False)
+        is_create = request.args.get('create_if_not_exists', True)
         project = self.module.context.rpc_manager.call.project_get_or_404(project_id=project_id)
         c = MinioClient(project=project)
         if "file" in request.files:
