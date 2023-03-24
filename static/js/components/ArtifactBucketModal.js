@@ -41,9 +41,10 @@ const ArtifactBucketModal = {
         },
         saveBucket() {
             this.applyClicked = true;
+            const api_url = this.$root.build_api_url('artifacts', 'buckets')
             if (this.isValidBucket) {
                 this.isLoading = true;
-                fetch(`/api/v1/artifacts/buckets/${getSelectedProjectId()}`,{
+                fetch(`${api_url}/${getSelectedProjectId()}`,{
                     method: 'POST',
                     headers: {'Content-Type': 'application/json', dataType: 'json'},
                     body: JSON.stringify({

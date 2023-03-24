@@ -61,10 +61,11 @@ const ArtifactStorage = {
             $('#storageLine').css('background', gradientLine);
         },
         async fetchStorage() {
-            const res = await fetch(`/api/v1/artifacts/storage/${getSelectedProjectId()}`, {
+            const api_url = this.$root.build_api_url('artifacts', 'storage')
+            const res = await fetch(`${api_url}/${getSelectedProjectId()}`, {
                 method: 'GET',
             })
-            return res.json();
+            return res.json()
         },
     },
     template: `

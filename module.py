@@ -41,6 +41,18 @@ class Module(module.ModuleModel):
             prefix="artifacts_",
             weight=5,
         )
+
+        theme.register_mode_subsection(
+            "administration", "configuration",
+            "artifacts", "Artifacts",
+            title="Artifacts",
+            kind="slot",
+            permissions=["global_admin"],
+            prefix="administration_artifacts_",
+            # icon_class="fas fa-server fa-fw",
+            # weight=2,
+        )
+
         self.descriptor.init_slots()
 
     def deinit(self):  # pylint: disable=R0201

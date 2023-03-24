@@ -1,5 +1,5 @@
 const Artifact = {
-    props: ['session'],
+    // props: ['session'],
     components: {
         'artifact-bucket-modal': ArtifactBucketModal,
         'artifact-bucket-update-modal': ArtifactBucketUpdateModal,
@@ -21,30 +21,32 @@ const Artifact = {
         }
     },
     mounted() {
-        const vm = this;
-        this.fetchBuckets().then(data => {
-            $("#bucket-table").bootstrapTable('append', data.rows);
-            this.setBucketEvent(data.rows)
-            this.bucketCount = data.rows.length;
-            this.isInitDataFetched = true;
-            if (data.rows.length > 0) {
-                this.selectFirstBucket();
-            }
-            return data.rows
-        }).then((rows) => {
-            if (rows.length > 0) {
-                this.fetchArtifacts(vm.selectedBucket.name).then(data => {
-                    $("#artifact-table").bootstrapTable('append', data.rows);
-                    $('#filesRetentionPolicy')
-                        .text(`${data.retention_policy?.expiration_value} ${data.retention_policy?.expiration_measure}`)
-                })
-            }
+        $(document).on('vue_init', () => {
+            const vm = this;
+            this.fetchBuckets().then(data => {
+                $("#bucket-table").bootstrapTable('append', data.rows);
+                this.setBucketEvent(data.rows)
+                this.bucketCount = data.rows.length;
+                this.isInitDataFetched = true;
+                if (data.rows.length > 0) {
+                    this.selectFirstBucket();
+                }
+                return data.rows
+            }).then((rows) => {
+                if (rows.length > 0) {
+                    this.fetchArtifacts(vm.selectedBucket.name).then(data => {
+                        $("#artifact-table").bootstrapTable('append', data.rows);
+                        $('#filesRetentionPolicy')
+                            .text(`${data.retention_policy?.expiration_value} ${data.retention_policy?.expiration_measure}`)
+                    })
+                }
+            })
         })
     },
     methods: {
         setBucketEvent(bucketList) {
             const vm = this;
-            $('#bucket-table').on('click', 'tbody tr:not(.no-records-found)', function(event) {
+            $('#bucket-table').on('click', 'tbody tr:not(.no-records-found)', function (event) {
                 const selectedUniqId = this.getAttribute('data-uniqueid');
                 vm.selectedBucket = bucketList.find(row => row.id === selectedUniqId);
                 $(this).addClass('highlight').siblings().removeClass('highlight');
@@ -52,14 +54,15 @@ const Artifact = {
             });
         },
         async fetchArtifacts(bucket) {
-            const res = await fetch(`/api/v1/artifacts/artifacts/${getSelectedProjectId()}/${bucket}`, {
+            const api_url = this.$root.build_api_url('artifacts', 'artifacts')
+            const res = await fetch(`${api_url}/${this.$root.project_id}/${bucket}`, {
                 method: 'GET',
             })
             return res.json();
         },
         async fetchBuckets() {
-            // TODO rewrite session
-            const res = await fetch (`/api/v1/artifacts/buckets/${this.session}`,{
+            const api_url = this.$root.build_api_url('artifacts', 'buckets')
+            const res = await fetch(`${api_url}/${this.$root.project_id}`, {
                 method: 'GET',
             })
             return res.json();
@@ -103,8 +106,8 @@ const Artifact = {
         },
         selectFirstBucket() {
             const vm = this;
-            $('#bucket-table tbody tr').each(function(i, item) {
-                if(i === 0) {
+            $('#bucket-table tbody tr').each(function (i, item) {
+                if (i === 0) {
                     const firstRow = $(item);
                     firstRow.addClass('highlight');
                     vm.selectedBucketRowIndex = 0;
@@ -128,7 +131,8 @@ const Artifact = {
         },
         deleteBucket() {
             this.loadingDelete = true;
-            fetch(`/api/v1/artifacts/buckets/${getSelectedProjectId()}?name=${this.selectedBucket.name}`, {
+            const api_url = this.$root.build_api_url('artifacts', 'buckets')
+            fetch(`${api_url}/${this.$root.project_id}?name=${this.selectedBucket.name}`, {
                 method: 'DELETE',
             }).then((data) => {
                 this.refreshBucketTable();
@@ -139,13 +143,14 @@ const Artifact = {
             })
         },
         deleteSelectedBuckets() {
+            const api_url = this.$root.build_api_url('artifacts', 'buckets')
             const selectedBucketList = $("#bucket-table").bootstrapTable('getSelections')
                 .map(bucket => bucket.name.toLowerCase());
-            const urls = selectedBucketList.map(name => `/api/v1/artifacts/buckets/${getSelectedProjectId()}?name=${name}`)
+            const urls = selectedBucketList.map(name => `${api_url}/${this.$root.project_id}?name=${name}`)
             this.loadingDelete = true;
             let chainPromises = Promise.resolve();
             urls.forEach((url) => {
-                chainPromises = chainPromises.then(() => fetch(url, { method: 'DELETE' }))
+                chainPromises = chainPromises.then(() => fetch(url, {method: 'DELETE'}))
             });
             chainPromises.finally(() => {
                 this.refreshBucketTable();

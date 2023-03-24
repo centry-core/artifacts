@@ -15,8 +15,9 @@ const ArtifactFilesTable = {
         _uploadFile(file) {
             const formData = new FormData()
             formData.append('file', file)
+            const api_url = this.$root.build_api_url('artifacts', 'artifacts')
             $.ajax({
-                url: `/api/v1/artifacts/artifacts/${getSelectedProjectId()}/${this.selectedBucket.name}`,
+                url: `${api_url}/${getSelectedProjectId()}/${this.selectedBucket.name}`,
                 type: 'POST',
                 data: formData,
                 contentType: false,
@@ -28,7 +29,8 @@ const ArtifactFilesTable = {
             });
         },
         deleteFiles() {
-            let url = `/api/v1/artifacts/artifacts/${getSelectedProjectId()}/${this.selectedBucket.name}?`
+            const api_url = this.$root.build_api_url('artifacts', 'artifacts')
+            let url = `${api_url}/${getSelectedProjectId()}/${this.selectedBucket.name}?`
             if ($("#artifact-table").bootstrapTable('getSelections').length > 0) {
                 $("#artifact-table").bootstrapTable('getSelections').forEach(item => {
                     url += "fname[]=" + item["name"] + "&"
@@ -44,8 +46,9 @@ const ArtifactFilesTable = {
             }
         },
         deleteFile(fileName, index) {
+            const api_url = this.$root.build_api_url('artifacts', 'artifact')
             $.ajax({
-                url: `/api/v1/artifacts/artifact/${getSelectedProjectId()}/${this.selectedBucket.name}/${fileName}`,
+                url: `${api_url}/${getSelectedProjectId()}/${this.selectedBucket.name}/${fileName}`,
                 type: 'DELETE',
                 success: (res) => {
                     $('#artifact-table').bootstrapTable('remove', {

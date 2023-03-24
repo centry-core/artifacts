@@ -35,14 +35,16 @@ const ArtifactBucketUpdateModal = {
         },
         async fetchBucket() {
             // TODO rewrite session
-            const res = await fetch (`/api/v1/artifacts/artifacts/${getSelectedProjectId()}/${this.selectedBucket.name}`,{
+            const api_url = this.$root.build_api_url('artifacts', 'artifacts')
+            const res = await fetch (`${api_url}/${getSelectedProjectId()}/${this.selectedBucket.name}`,{
                 method: 'GET',
             })
-            return res.json();
+            return res.json()
         },
         saveBucket() {
-            this.isLoading = true;
-            fetch(`/api/v1/artifacts/buckets/${getSelectedProjectId()}`,{
+            this.isLoading = true
+            const api_url = this.$root.build_api_url('artifacts', 'buckets')
+            fetch(`${api_url}/${getSelectedProjectId()}`,{
                 method: 'PUT',
                 headers: {'Content-Type': 'application/json', dataType: 'json'},
                 body: JSON.stringify({

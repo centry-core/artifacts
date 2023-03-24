@@ -22,8 +22,9 @@ var filesFormatter = {
                 <ul class="dropdown-menu">
                     <li class="dropdown-menu_item dropdown-item">
                         <a 
-                            download href="/api/v1/artifacts/artifact/${getSelectedProjectId()}/${V.artifact.selectedBucket.name}/${row.name}"
                             class="d-flex align-items-center"
+                            download
+                            href="${V.build_api_url('artifacts', 'artifact')}/${getSelectedProjectId()}/${V.artifact.selectedBucket.name}/${row.name}"
                         >
                                 <i class="icon__18x18 icon-download mr-2"></i><span class="w-100 font-h5">Download</span>
                         </a>
