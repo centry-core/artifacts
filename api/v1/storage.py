@@ -1,5 +1,4 @@
 from hurry.filesize import size
-from flask_restful import Resource
 
 from tools import MinioClient, MinioClientAdmin, api_tools
 
@@ -50,7 +49,7 @@ class ProjectAPI(api_tools.APIModeHandler):
 
 
 class AdminAPI(api_tools.APIModeHandler):
-    def get(self, project_id: int):
+    def get(self, **kwargs):
         c = MinioClientAdmin()
         buckets = c.list_bucket()
         bucket_types = {}
@@ -92,11 +91,14 @@ class AdminAPI(api_tools.APIModeHandler):
 
 class API(api_tools.APIBase):
     url_params = [
-        '<string:mode>/<int:project_id>',
-        '<int:project_id>',
+        '<string:project_id>',
+        '<string:mode>/<string:project_id>',
     ]
 
     mode_handlers = {
         'default': ProjectAPI,
         'administration': AdminAPI
     }
+
+from pylon.core.tools import log
+log.info('API STORAGE')

@@ -5,9 +5,8 @@ from werkzeug.exceptions import Forbidden
 from hurry.filesize import size
 
 from flask import request
-from flask_restful import Resource
 
-from tools import MinioClient, MinioClientAdmin, api_tools
+from tools import MinioClient, MinioClientAdmin, api_tools, auth
 
 
 def calculate_retention_days(project, expiration_value, expiration_measure):
@@ -87,7 +86,7 @@ class ProjectAPI(api_tools.APIModeHandler):
 
 
 class AdminAPI(api_tools.APIModeHandler):
-    def get(self, project_id: int):
+    def get(self, **kwargs):
         c = MinioClientAdmin()
         buckets = c.list_bucket()
         rows = []
@@ -103,7 +102,7 @@ class AdminAPI(api_tools.APIModeHandler):
                         )
         return {"total": len(buckets), "rows": rows}, 200
 
-    def post(self, project_id: int):
+    def post(self, **kwargs):
         args = request.json
         bucket = args.get("name")
         if not bucket:
@@ -125,7 +124,7 @@ class AdminAPI(api_tools.APIModeHandler):
         else:
             return {"message": response}, 400
 
-    def put(self, project_id: int):
+    def put(self, **kwargs):
         args = request.json
         bucket = args.get("name")
         if not bucket:
@@ -147,15 +146,22 @@ class AdminAPI(api_tools.APIModeHandler):
         else:
             return {"message": "The data retention limit not specify or provided data is not correct"}, 400
 
-    def delete(self, project_id: int):
+    @auth.decorators.check_api({
+        "permissions": ["configuration.artifacts.artifacts.delete"],
+        "recommended_roles": {
+            "administration": {"admin": True, "viewer": False, "editor": False},
+            "project": {"admin": False, "viewer": False, "editor": False},
+            "developer": {"admin": False, "viewer": False, "editor": False},
+        }})
+    def delete(self, **kwargs):
         MinioClientAdmin().remove_bucket(request.args["name"])
         return {"message": "Deleted"}, 200
 
 
 class API(api_tools.APIBase):
     url_params = [
-        '<string:mode>/<int:project_id>',
-        '<int:project_id>',
+        '<string:project_id>',
+        '<string:mode>/<string:project_id>',
     ]
 
     mode_handlers = {
