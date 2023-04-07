@@ -61,7 +61,7 @@ class AdminAPI(api_tools.APIModeHandler):
         "permissions": ["configuration.artifacts.artifacts.view"],
         "recommended_roles": {
             "administration": {"admin": True, "viewer": False, "editor": False},
-            "project": {"admin": False, "viewer": False, "editor": False},
+            "default": {"admin": False, "viewer": False, "editor": False},
             "developer": {"admin": False, "viewer": False, "editor": False},
         }})
     def get(self, bucket: str, **kwargs):
@@ -82,7 +82,7 @@ class AdminAPI(api_tools.APIModeHandler):
         "permissions": ["configuration.artifacts.artifacts.edit"],
         "recommended_roles": {
             "administration": {"admin": True, "viewer": False, "editor": True},
-            "project": {"admin": False, "viewer": False, "editor": False},
+            "default": {"admin": False, "viewer": False, "editor": False},
             "developer": {"admin": False, "viewer": False, "editor": False},
         }})
     def post(self, bucket: str, **kwargs):
@@ -95,7 +95,7 @@ class AdminAPI(api_tools.APIModeHandler):
         "permissions": ["configuration.artifacts.artifacts.delete"],
         "recommended_roles": {
             "administration": {"admin": True, "viewer": False, "editor": False},
-            "project": {"admin": False, "viewer": False, "editor": False},
+            "default": {"admin": False, "viewer": False, "editor": False},
             "developer": {"admin": False, "viewer": False, "editor": False},
         }})
     def delete(self, bucket: str, **kwargs):

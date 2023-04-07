@@ -150,7 +150,7 @@ class AdminAPI(api_tools.APIModeHandler):
         "permissions": ["configuration.artifacts.artifacts.delete"],
         "recommended_roles": {
             "administration": {"admin": True, "viewer": False, "editor": False},
-            "project": {"admin": False, "viewer": False, "editor": False},
+            "default": {"admin": False, "viewer": False, "editor": False},
             "developer": {"admin": False, "viewer": False, "editor": False},
         }})
     def delete(self, **kwargs):
