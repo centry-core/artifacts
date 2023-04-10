@@ -41,7 +41,10 @@ class ProjectAPI(api_tools.APIModeHandler):
         project = self.module.context.rpc_manager.call.project_get_or_404(project_id=project_id)
         mc = MinioClient(project=project)
         if "file" in request.files:
-            api_tools.upload_file(bucket, request.files["file"], project, create_if_not_exists=request.args.get('create_if_not_exists', True))
+            api_tools.upload_file(
+                bucket, request.files["file"], project,
+                create_if_not_exists=request.args.get('create_if_not_exists', True)
+            )
         return {"message": "Done", "size": size(mc.get_bucket_size(bucket))}, 200
 
     def delete(self, project_id: int, bucket: str):
@@ -88,7 +91,10 @@ class AdminAPI(api_tools.APIModeHandler):
     def post(self, bucket: str, **kwargs):
         c = MinioClientAdmin()
         if "file" in request.files:
-            api_tools.upload_file_admin(bucket, request.files["file"])
+            api_tools.upload_file_admin(
+                bucket, request.files["file"],
+                create_if_not_exists=request.args.get('create_if_not_exists', True)
+            )
         return {"message": "Done", "size": size(c.get_bucket_size(bucket))}, 200
 
     @auth.decorators.check_api({
