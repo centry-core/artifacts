@@ -16,9 +16,7 @@
 
 from pylon.core.tools import log  # pylint: disable=E0611,E0401
 from pylon.core.tools import module  # pylint: disable=E0611,E0401
-
-from .api.artifacts_security_results_page import ArtifactsForSecurityResults, ArtifactDownload
-from ..shared.utils.api_utils import add_resource_to_api
+from tools import theme
 
 
 class Module(module.ModuleModel):
@@ -31,19 +29,31 @@ class Module(module.ModuleModel):
     def init(self):
         """ Init module """
         log.info("Initializing module Artifacts")
-        from .api.buckets import Buckets
-        from .api.artifacts import Artifacts
-        from .api.artifact import Artifact
+        self.descriptor.init_api()
+        self.descriptor.init_rpcs()
+        self.descriptor.init_blueprint()
 
-        add_resource_to_api(self.context.api, Buckets, "/artifact/<int:project_id>")
-        add_resource_to_api(self.context.api, Artifacts, "/artifact/<int:project_id>/<string:bucket>")
-        add_resource_to_api(self.context.api, Artifact, "/artifact/<int:project_id>/<string:bucket>/<string:filename>")
-        #TODO: rename in interceptor
-        add_resource_to_api(self.context.api, Artifact, "/artifacts/<int:project_id>/<string:bucket>/<string:filename>",
-                            endpoint="artifact_old")
+        theme.register_subsection(
+            "configuration", "artifacts",
+            "Artifacts",
+            title="Artifacts",
+            kind="slot",
+            prefix="artifacts_",
+            weight=5,
+        )
 
-        add_resource_to_api(self.context.api, ArtifactsForSecurityResults, "/artifact/security/<int:run_id>")
-        add_resource_to_api(self.context.api, ArtifactDownload, "/artifact/security/<int:run_id>/<string:filename>")
+        theme.register_mode_subsection(
+            "administration", "configuration",
+            "artifacts", "Artifacts",
+            title="Artifacts",
+            kind="slot",
+            permissions=["global_admin"],
+            prefix="administration_artifacts_",
+            # icon_class="fas fa-server fa-fw",
+            # weight=2,
+        )
+
+        self.descriptor.init_slots()
 
     def deinit(self):  # pylint: disable=R0201
         """ De-init module """
