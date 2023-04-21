@@ -1,9 +1,10 @@
 from hurry.filesize import size
 
-from tools import MinioClient, MinioClientAdmin, api_tools
+from tools import MinioClient, MinioClientAdmin, api_tools, auth
 
 
 class ProjectAPI(api_tools.APIModeHandler):
+    @auth.decorators.check_api(["configuration.artifacts.artifacts.view"])
     def get(self, project_id: int):
         project = self.module.context.rpc_manager.call.project_get_or_404(project_id=project_id)
         c = MinioClient(project)
@@ -49,6 +50,7 @@ class ProjectAPI(api_tools.APIModeHandler):
 
 
 class AdminAPI(api_tools.APIModeHandler):
+    @auth.decorators.check_api(["configuration.artifacts.artifacts.view"])
     def get(self, **kwargs):
         c = MinioClientAdmin()
         buckets = c.list_bucket()

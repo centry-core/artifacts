@@ -2,6 +2,7 @@ from hurry.filesize import size
 from flask import request
 from flask_restful import Resource
 
+from tools import auth
 
 class API(Resource):
     url_params = [
@@ -11,6 +12,7 @@ class API(Resource):
     def __init__(self, module):
         self.module = module
 
+    @auth.decorators.check_api(["configuration.artifacts.artifacts.view"])
     def get(self, run_id: str):
         test_type = request.args.get('test_type')
         if test_type == "sast":

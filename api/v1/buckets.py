@@ -23,6 +23,7 @@ def calculate_retention_days(project, expiration_value, expiration_measure):
 
 
 class ProjectAPI(api_tools.APIModeHandler):
+    @auth.decorators.check_api(["configuration.artifacts.artifacts.view"])
     def get(self, project_id: int):
         project = self.module.context.rpc_manager.call.project_get_or_404(project_id=project_id)
         c = MinioClient(project)
@@ -41,6 +42,7 @@ class ProjectAPI(api_tools.APIModeHandler):
                         )
         return {"total": len(buckets), "rows": rows}, 200
 
+    @auth.decorators.check_api(["configuration.artifacts.artifacts.create"])
     def post(self, project_id: int):
         args = request.json
         bucket = args.get("name")
@@ -59,6 +61,13 @@ class ProjectAPI(api_tools.APIModeHandler):
         else:
             return {"message": response}, 400
 
+    @auth.decorators.check_api({
+        "permissions": ["configuration.artifacts.artifacts.edit"],
+        "recommended_roles": {
+            "administration": {"admin": True, "viewer": False, "editor": True},
+            "default": {"admin": True, "viewer": False, "editor": True},
+            "developer": {"admin": True, "viewer": False, "editor": True},
+        }})
     def put(self, project_id: int):
         args = request.json
         bucket = args.get("name")
@@ -79,6 +88,7 @@ class ProjectAPI(api_tools.APIModeHandler):
         else:
             return {"message": "The data retention limit not specify or provided data is not correct"}, 400
 
+    @auth.decorators.check_api(["configuration.artifacts.artifacts.delete"])
     def delete(self, project_id: int):
         project = self.module.context.rpc_manager.call.project_get_or_404(project_id=project_id)
         MinioClient(project=project).remove_bucket(request.args["name"])
@@ -86,6 +96,7 @@ class ProjectAPI(api_tools.APIModeHandler):
 
 
 class AdminAPI(api_tools.APIModeHandler):
+    @auth.decorators.check_api(["configuration.artifacts.artifacts.view"])
     def get(self, **kwargs):
         c = MinioClientAdmin()
         buckets = c.list_bucket()
@@ -102,6 +113,7 @@ class AdminAPI(api_tools.APIModeHandler):
                         )
         return {"total": len(buckets), "rows": rows}, 200
 
+    @auth.decorators.check_api(["configuration.artifacts.artifacts.create"])
     def post(self, **kwargs):
         args = request.json
         bucket = args.get("name")
@@ -124,6 +136,7 @@ class AdminAPI(api_tools.APIModeHandler):
         else:
             return {"message": response}, 400
 
+    @auth.decorators.check_api(["configuration.artifacts.artifacts.edit"])
     def put(self, **kwargs):
         args = request.json
         bucket = args.get("name")
@@ -146,13 +159,7 @@ class AdminAPI(api_tools.APIModeHandler):
         else:
             return {"message": "The data retention limit not specify or provided data is not correct"}, 400
 
-    @auth.decorators.check_api({
-        "permissions": ["configuration.artifacts.artifacts.delete"],
-        "recommended_roles": {
-            "administration": {"admin": True, "viewer": False, "editor": False},
-            "default": {"admin": False, "viewer": False, "editor": False},
-            "developer": {"admin": False, "viewer": False, "editor": False},
-        }})
+    @auth.decorators.check_api(["configuration.artifacts.artifacts.delete"])
     def delete(self, **kwargs):
         MinioClientAdmin().remove_bucket(request.args["name"])
         return {"message": "Deleted"}, 200

@@ -4,7 +4,7 @@ from flask import send_file, abort
 
 from flask_restful import Resource
 
-from tools import MinioClient
+from tools import MinioClient, auth
 
 
 class API(Resource):
@@ -14,7 +14,8 @@ class API(Resource):
 
     def __init__(self, module):
         self.module = module
-
+        
+    @auth.decorators.check_api(["configuration.artifacts.artifacts.view"])
     def get(self, run_id: int, filename: str):
         test_data = self.module.context.rpc_manager.call.backend_results_or_404(run_id=run_id).to_json()
         project = self.module.context.rpc_manager.call.project_get_or_404(project_id=test_data["project_id"])
