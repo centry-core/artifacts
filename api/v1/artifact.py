@@ -4,11 +4,11 @@ from hurry.filesize import size
 from pylon.core.tools import log
 from botocore.exceptions import ClientError
 
-from tools import MinioClient, MinioClientAdmin, api_tools
+from tools import MinioClient, MinioClientAdmin, api_tools, auth
 
 
 class ProjectAPI(api_tools.APIModeHandler):
-
+    @auth.decorators.check_api(["configuration.artifacts.artifacts.view"])
     def get(self, project_id: int, bucket: str, filename: str):
         project = self.module.context.rpc_manager.call.project_get_or_404(project_id=project_id)
         try:
@@ -21,6 +21,7 @@ class ProjectAPI(api_tools.APIModeHandler):
         except TypeError:  # new flask
             return send_file(BytesIO(file), download_name=filename, as_attachment=False)
 
+    @auth.decorators.check_api(["configuration.artifacts.artifacts.delete"])
     def delete(self, project_id: int, bucket: str, filename: str):
         project = self.module.context.rpc_manager.call.project_get_or_404(project_id=project_id)
         c = MinioClient(project=project)
@@ -29,7 +30,7 @@ class ProjectAPI(api_tools.APIModeHandler):
 
 
 class AdminAPI(api_tools.APIModeHandler):
-
+    @auth.decorators.check_api(["configuration.artifacts.artifacts.view"]})
     def get(self, bucket: str, filename: str, **kwargs):
         file = MinioClientAdmin().download_file(bucket, filename)
         try:
@@ -37,6 +38,7 @@ class AdminAPI(api_tools.APIModeHandler):
         except TypeError:  # new flask
             return send_file(BytesIO(file), download_name=filename, as_attachment=False)
 
+    @auth.decorators.check_api(["configuration.artifacts.artifacts.delete"])
     def delete(self, bucket: str, filename: str, **kwargs):
         c = MinioClientAdmin()
         c.remove_file(bucket, filename)

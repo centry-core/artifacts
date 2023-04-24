@@ -38,6 +38,13 @@ class Module(module.ModuleModel):
             "Artifacts",
             title="Artifacts",
             kind="slot",
+            permissions={
+                "permissions": ["configuration.artifacts"],
+                "recommended_roles": {
+                    "administration": {"admin": True, "viewer": True, "editor": True},
+                    "default": {"admin": True, "viewer": True, "editor": True},
+                    "developer": {"admin": True, "viewer": True, "editor": True},
+                }},
             prefix="artifacts_",
             weight=5,
         )
@@ -47,7 +54,13 @@ class Module(module.ModuleModel):
             "artifacts", "Artifacts",
             title="Artifacts",
             kind="slot",
-            permissions=["global_admin"],
+            permissions={
+                "permissions": ["configuration.artifacts"],
+                "recommended_roles": {
+                    "administration": {"admin": True, "viewer": True, "editor": True},
+                    "default": {"admin": True, "viewer": True, "editor": True},
+                    "developer": {"admin": True, "viewer": True, "editor": True},
+                }},
             prefix="administration_artifacts_",
             # icon_class="fas fa-server fa-fw",
             # weight=2,

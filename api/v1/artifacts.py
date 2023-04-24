@@ -22,6 +22,13 @@ def calculate_readable_retention_policy(days: int) -> dict:
 
 
 class ProjectAPI(api_tools.APIModeHandler):
+    @auth.decorators.check_api({
+        "permissions": ["configuration.artifacts.artifacts.view"],
+        "recommended_roles": {
+            "administration": {"admin": True, "viewer": True, "editor": True},
+            "default": {"admin": True, "viewer": True, "editor": True},
+            "developer": {"admin": True, "viewer": True, "editor": True},
+        }})
     def get(self, project_id: int, bucket: str):
         project = self.module.context.rpc_manager.call.project_get_or_404(project_id=project_id)
         mc = MinioClient(project)
@@ -37,6 +44,13 @@ class ProjectAPI(api_tools.APIModeHandler):
             each["size"] = size(each["size"])
         return {"retention_policy": retention_policy, "total": len(files), "rows": files}
 
+    @auth.decorators.check_api({
+        "permissions": ["configuration.artifacts.artifacts.create"],
+        "recommended_roles": {
+            "administration": {"admin": True, "viewer": False, "editor": True},
+            "default": {"admin": True, "viewer": False, "editor": True},
+            "developer": {"admin": True, "viewer": False, "editor": True},
+        }})
     def post(self, project_id: int, bucket: str):
         project = self.module.context.rpc_manager.call.project_get_or_404(project_id=project_id)
         mc = MinioClient(project=project)
@@ -47,6 +61,13 @@ class ProjectAPI(api_tools.APIModeHandler):
             )
         return {"message": "Done", "size": size(mc.get_bucket_size(bucket))}, 200
 
+    @auth.decorators.check_api({
+        "permissions": ["configuration.artifacts.artifacts.delete"],
+        "recommended_roles": {
+            "administration": {"admin": True, "viewer": False, "editor": False},
+            "default": {"admin": True, "viewer": False, "editor": False},
+            "developer": {"admin": True, "viewer": False, "editor": False},
+        }})
     def delete(self, project_id: int, bucket: str):
         args = request.args
         project = self.module.context.rpc_manager.call.project_get_or_404(project_id=project_id)
@@ -63,9 +84,9 @@ class AdminAPI(api_tools.APIModeHandler):
     @auth.decorators.check_api({
         "permissions": ["configuration.artifacts.artifacts.view"],
         "recommended_roles": {
-            "administration": {"admin": True, "viewer": False, "editor": False},
-            "default": {"admin": False, "viewer": False, "editor": False},
-            "developer": {"admin": False, "viewer": False, "editor": False},
+            "administration": {"admin": True, "viewer": True, "editor": True},
+            "default": {"admin": True, "viewer": True, "editor": True},
+            "developer": {"admin": True, "viewer": True, "editor": True},
         }})
     def get(self, bucket: str, **kwargs):
         c = MinioClientAdmin()
@@ -82,11 +103,11 @@ class AdminAPI(api_tools.APIModeHandler):
         return {"retention_policy": retention_policy, "total": len(files), "rows": files}
 
     @auth.decorators.check_api({
-        "permissions": ["configuration.artifacts.artifacts.edit"],
+        "permissions": ["configuration.artifacts.artifacts.create"],
         "recommended_roles": {
             "administration": {"admin": True, "viewer": False, "editor": True},
-            "default": {"admin": False, "viewer": False, "editor": False},
-            "developer": {"admin": False, "viewer": False, "editor": False},
+            "default": {"admin": True, "viewer": False, "editor": True},
+            "developer": {"admin": True, "viewer": False, "editor": True},
         }})
     def post(self, bucket: str, **kwargs):
         c = MinioClientAdmin()
@@ -101,8 +122,8 @@ class AdminAPI(api_tools.APIModeHandler):
         "permissions": ["configuration.artifacts.artifacts.delete"],
         "recommended_roles": {
             "administration": {"admin": True, "viewer": False, "editor": False},
-            "default": {"admin": False, "viewer": False, "editor": False},
-            "developer": {"admin": False, "viewer": False, "editor": False},
+            "default": {"admin": True, "viewer": False, "editor": False},
+            "developer": {"admin": True, "viewer": False, "editor": False},
         }})
     def delete(self, bucket: str, **kwargs):
         args = request.args
