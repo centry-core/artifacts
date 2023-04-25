@@ -30,7 +30,7 @@ class ProjectAPI(api_tools.APIModeHandler):
 
 
 class AdminAPI(api_tools.APIModeHandler):
-    @auth.decorators.check_api(["configuration.artifacts.artifacts.view"]})
+    @auth.decorators.check_api(["configuration.artifacts.artifacts.view"])
     def get(self, bucket: str, filename: str, **kwargs):
         file = MinioClientAdmin().download_file(bucket, filename)
         try:
