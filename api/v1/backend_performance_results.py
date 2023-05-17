@@ -20,10 +20,14 @@ class API(Resource):
         project = self.module.context.rpc_manager.call.project_get_or_404(project_id=test_data["project_id"])
         minio_client = MinioClient(project)
         bucket_name = str(test_data["name"]).replace("_", "").replace(" ", "").lower()
-        files = minio_client.list_files(bucket_name)
-        _files = []
-        for each in files:
-            if each["name"] == f'{test_data["build_id"]}.log':
-                each["size"] = size(each["size"])
-                _files.append(each)
-        return _files
+        minio_files = minio_client.list_files(bucket_name)
+        files = []
+        build_id: str = test_data["build_id"].split('build_')[-1]
+        custom_files_prefix = f'reports_test_results_{build_id}'
+        log_file_name = f'build_{build_id}.log'
+        for f in minio_files:
+            name: str = f["name"]
+            if name == log_file_name or name.startswith(custom_files_prefix):
+                f["size"] = size(f["size"])
+                files.append(f)
+        return files, 200
