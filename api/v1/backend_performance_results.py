@@ -16,9 +16,12 @@ class API(Resource):
     @auth.decorators.check_api(["configuration.artifacts.artifacts.view"])
     def get(self, result_id: int):
         test_data = self.module.context.rpc_manager.call.backend_results_or_404(run_id=result_id).to_json()
-
         project = self.module.context.rpc_manager.call.project_get_or_404(project_id=test_data["project_id"])
-        minio_client = MinioClient(project)
+        integration_id = test_data['test_config'].get(
+            'integrations', {}).get('system', {}).get('s3_integration', {}).get('id')
+        is_local = test_data['test_config'].get(
+            'integrations', {}).get('system', {}).get('s3_integration', {}).get('is_local')
+        minio_client = MinioClient(project, integration_id, is_local)
         bucket_name = str(test_data["name"]).replace("_", "").replace(" ", "").lower()
         minio_files = minio_client.list_files(bucket_name)
         files = []

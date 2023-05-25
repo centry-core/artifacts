@@ -31,7 +31,9 @@ class ProjectAPI(api_tools.APIModeHandler):
         }})
     def get(self, project_id: int, bucket: str):
         project = self.module.context.rpc_manager.call.project_get_or_404(project_id=project_id)
-        mc = MinioClient(project)
+        integration_id = request.args.get('integration_id')
+        is_local = request.args.get('is_local', '').lower() == 'true'
+        mc = MinioClient(project, integration_id, is_local)
         try:
             lifecycle = mc.get_bucket_lifecycle(bucket)
             retention_policy = calculate_readable_retention_policy(
@@ -53,10 +55,12 @@ class ProjectAPI(api_tools.APIModeHandler):
         }})
     def post(self, project_id: int, bucket: str):
         project = self.module.context.rpc_manager.call.project_get_or_404(project_id=project_id)
-        mc = MinioClient(project=project)
+        integration_id = request.args.get('integration_id')
+        is_local = request.args.get('is_local', '').lower() == 'true'
+        mc = MinioClient(project, integration_id, is_local)
         if "file" in request.files:
             api_tools.upload_file(
-                bucket, request.files["file"], project,
+                bucket, request.files["file"], project, integration_id, is_local,
                 create_if_not_exists=request.args.get('create_if_not_exists', True)
             )
         return {"message": "Done", "size": size(mc.get_bucket_size(bucket))}, 200
@@ -71,7 +75,9 @@ class ProjectAPI(api_tools.APIModeHandler):
     def delete(self, project_id: int, bucket: str):
         args = request.args
         project = self.module.context.rpc_manager.call.project_get_or_404(project_id=project_id)
-        c = MinioClient(project=project)
+        integration_id = args.get('integration_id')
+        is_local = args.get('is_local', '').lower() == 'true'
+        c = MinioClient(project, integration_id, is_local)
         if not args.get("fname[]"):
             c.remove_bucket(bucket)
         else:

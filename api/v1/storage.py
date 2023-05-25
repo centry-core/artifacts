@@ -1,4 +1,5 @@
 from hurry.filesize import size
+from flask import request
 
 from tools import MinioClient, MinioClientAdmin, api_tools, auth
 
@@ -7,7 +8,9 @@ class ProjectAPI(api_tools.APIModeHandler):
     @auth.decorators.check_api(["configuration.artifacts.artifacts.view"])
     def get(self, project_id: int):
         project = self.module.context.rpc_manager.call.project_get_or_404(project_id=project_id)
-        c = MinioClient(project)
+        integration_id = request.args.get('integration_id')
+        is_local = request.args.get('is_local', '').lower() == 'true'
+        c = MinioClient(project, integration_id, is_local)
         storage_space_quota = self.module.context.rpc_manager.call.project_get_storage_space_quota(
             project_id=project_id
             )
