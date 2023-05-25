@@ -72,7 +72,7 @@ const ArtifactFilesTable = {
                     <div class="d-flex justify-content-end">
                         <button type="button" 
                             @click="deleteFiles"
-                            class="btn btn-secondary btn-sm btn-icon__sm mr-2">
+                            class="btn btn-secondary btn-icon btn-icon__purple">
                             <i class="icon__18x18 icon-delete"></i>
                         </button>
                     </div>
