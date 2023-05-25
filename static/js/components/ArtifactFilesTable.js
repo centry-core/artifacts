@@ -84,9 +84,9 @@ const ArtifactFilesTable = {
     },
     template: `
         <div class="card mt-3 mr-3 card-table-sm w-100" @dragover.prevent @drop.prevent>
-            <div class="row p-3">
+            <div class="row pt-4 px-24">
                 <div class="col-4">
-                    <h4>Bucket {{ selectedBucket.name }}</h4>   
+                    <p class="font-h4 font-bold">Bucket {{ selectedBucket.name }}</p>   
                     <p class="font-h6 font-weight-400">Retention policy - <span id="filesRetentionPolicy"></span></p>
                 </div>
                 <div class="col-8">
@@ -94,12 +94,12 @@ const ArtifactFilesTable = {
                         <button type="button" 
                             @click="deleteFiles"
                             class="btn btn-secondary btn-sm btn-icon__sm mr-2">
-                            <i class="fas fa-trash-alt"></i>
+                            <i class="icon__18x18 icon-delete"></i>
                         </button>
                     </div>
                 </div>
             </div>
-            <div class="card-body" @drop="uploadFiles">
+            <div class="card-body pt-4" @drop="uploadFiles">
                 <table class="table table-borderless"
                     id="artifact-table"
                     data-toggle="table"
