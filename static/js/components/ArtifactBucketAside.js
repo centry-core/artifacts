@@ -23,8 +23,8 @@ const ArtifactBucketAside = {
             return this.checkedBucketsList.length > 0;
         },
         responsiveTableHeight() {
-            return `${(window.innerHeight - 580)}px`;
-        },
+            return `${(window.innerHeight - 400)}px`;
+        }
     },
     watch: {
         isInitDataFetched() {
@@ -140,21 +140,21 @@ const ArtifactBucketAside = {
                         <button type="button"
                              data-toggle="modal" 
                              data-target="#bucketModal"
-                             class="btn btn-basic btn-sm btn-icon__sm mr-2">
+                             class="btn btn-basic btn-icon mr-2">
                             <i class="icon__14x14 icon-plus__big icon__white"></i>
                         </button>
-                        <button type="button" class="btn btn-secondary btn-sm btn-icon__purple btn-icon__sm mr-2"
+                        <button type="button" class="btn btn-secondary btn-icon btn-icon__purple mr-2"
                             @click="this.isShowSearch = !this.isShowSearch">
                             <i class="icon-search__filled icon__16x16"></i>
                         </button>
-                        <button type="button" class="btn btn-secondary btn-sm btn-icon__purple btn-icon__sm mr-2"
+                        <button type="button" class="btn btn-secondary btn-icon btn-icon__purple mr-2"
                             @click="switchSelectItems">
                             <i class="icon__18x18 icon-multichoice"></i>
                         </button>
                         <button type="button" 
                             @click="$emit('open-confirm', 'multiple')"
                             :disabled="!isAnyBucketSelected"
-                            class="btn btn-secondary btn-sm btn-icon__sm btn-icon__purple">
+                            class="btn btn-secondary btn-icon btn-icon__purple">
                             <i class="icon__18x18 icon-delete"></i>
                         </button>
                     </div>
@@ -192,6 +192,7 @@ const ArtifactBucketAside = {
                             <th scope="col" data-sortable="true" data-field="name" class="bucket-name">NAME</th>
                             <th scope="col" data-sortable="true" data-field="size" data-sorter="filesizeSorter" class="bucket-size">SIZE</th>
                             <th scope="col"
+                                class="pr-0"
                                 data-formatter='<div class="d-none">
                                     <button class="btn btn-default btn-xs btn-table btn-icon__xs bucket_delete"><i class="icon__18x18 icon-delete"></i></button>
                                     <button class="btn btn-default btn-xs btn-table btn-icon__xs bucket_setting"><i class="fas fa-gear"></i></button>
