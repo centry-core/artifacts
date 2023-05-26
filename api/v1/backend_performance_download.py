@@ -20,7 +20,7 @@ class API(Resource):
         test_data = self.module.context.rpc_manager.call.backend_results_or_404(run_id=run_id).to_json()
         project = self.module.context.rpc_manager.call.project_get_or_404(project_id=test_data["project_id"])
         integration_id = test_data['test_config'].get(
-            'integrations', {}).get('system', {}).get('s3_integration', {}).get('id')
+            'integrations', {}).get('system', {}).get('s3_integration', {}).get('integration_id')
         is_local = test_data['test_config'].get(
             'integrations', {}).get('system', {}).get('s3_integration', {}).get('is_local')
         minio_client = MinioClient(project, integration_id, is_local)
