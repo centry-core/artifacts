@@ -2,12 +2,21 @@ const ArtifactBucketAside = {
     components: {
         'artifact-storage': ArtifactStorage,
     },
-    props: ['isInitDataFetched', 'selectedBucketRowIndex', 'selectedBucket', 'bucketCount', 'checkedBucketsList'],
+    props: ['isInitDataFetched', 
+            'selectedBucketRowIndex', 
+            'selectedBucket', 
+            'bucketCount', 
+            'checkedBucketsList',
+            'projectIntegrations',
+            'selectedIntegration',
+            'minioQuery'
+        ],
     data() {
         return {
             canSelectItems: false,
             loadingDelete: false,
             isShowSearch: false,
+            newSelectedIntegration: null
         }
     },
     computed: {
@@ -15,12 +24,15 @@ const ArtifactBucketAside = {
             return this.checkedBucketsList.length > 0;
         },
         responsiveTableHeight() {
-            return `${(window.innerHeight - 410)}px`;
-        }
+            return `${(window.innerHeight - 580)}px`;
+        },
     },
     watch: {
         isInitDataFetched() {
             this.setBucketEvents();
+        },
+        newSelectedIntegration() {
+            this.$emit('update-selected-integration', this.newSelectedIntegration);
         }
     },
     mounted() {
@@ -91,9 +103,35 @@ const ArtifactBucketAside = {
                 .rows[this.selectedBucketRowIndex + 1]
                 .classList.add('highlight');
         },
+        getIntegrationTitle(integration) {
+            return integration.is_default ? `${integration.config?.name} - default` : integration.config?.name
+        },
+        get_integration_value(integration) {
+            return `${integration?.id}#${integration?.project_id}`
+        },
     },
     template: `
         <aside class="m-3 card card-table-sm" style="width: 450px">
+
+            <div class="row p-4">
+                <div class="col-4">
+                    <h4>Storage</h4>
+                </div>
+            </div>
+            <div class="w-100 card px-4 pb-3">
+                <select id='selector_integration' class="selectpicker bootstrap-select__b" data-style="btn"
+                    v-model="newSelectedIntegration">
+                    <option
+                        v-for="integration in projectIntegrations"
+                        :value="get_integration_value(integration)"
+                        :title="getIntegrationTitle(integration)"
+                        :key="integration"
+                    >
+                        {{ getIntegrationTitle(integration) }}
+                    </option>
+                </select>
+            </div> 
+
             <div class="row p-4">
                 <div class="col-4">
                     <h4>Bucket</h4>
@@ -174,6 +212,7 @@ const ArtifactBucketAside = {
                 @register="$root.register"
                 instance_name="storage"
                 :bucketCount="bucketCount"
+                :minio-query="minioQuery"
                 :key="bucketCount">
             </artifact-storage>
         </aside>

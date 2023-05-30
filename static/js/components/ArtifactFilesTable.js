@@ -1,5 +1,5 @@
 const ArtifactFilesTable = {
-    props: ['selected-bucket', ],
+    props: ['selected-bucket', 'minioQuery'],
     data() {
         return {
             taskResults: {},
@@ -17,7 +17,7 @@ const ArtifactFilesTable = {
             formData.append('file', file)
             const api_url = this.$root.build_api_url('artifacts', 'artifacts')
             $.ajax({
-                url: `${api_url}/${getSelectedProjectId()}/${this.selectedBucket.name}`,
+                url: `${api_url}/${getSelectedProjectId()}/${this.selectedBucket.name}${this.minioQuery}`,
                 type: 'POST',
                 data: formData,
                 contentType: false,
@@ -30,7 +30,7 @@ const ArtifactFilesTable = {
         },
         deleteFiles() {
             const api_url = this.$root.build_api_url('artifacts', 'artifacts')
-            let url = `${api_url}/${getSelectedProjectId()}/${this.selectedBucket.name}?`
+            let url = `${api_url}/${getSelectedProjectId()}/${this.selectedBucket.name}${this.minioQuery}&`
             if ($("#artifact-table").bootstrapTable('getSelections').length > 0) {
                 $("#artifact-table").bootstrapTable('getSelections').forEach(item => {
                     url += "fname[]=" + item["name"] + "&"
@@ -48,7 +48,7 @@ const ArtifactFilesTable = {
         deleteFile(fileName, index) {
             const api_url = this.$root.build_api_url('artifacts', 'artifact')
             $.ajax({
-                url: `${api_url}/${getSelectedProjectId()}/${this.selectedBucket.name}/${fileName}`,
+                url: `${api_url}/${getSelectedProjectId()}/${this.selectedBucket.name}/${fileName}${this.minioQuery}`,
                 type: 'DELETE',
                 success: (res) => {
                     $('#artifact-table').bootstrapTable('remove', {

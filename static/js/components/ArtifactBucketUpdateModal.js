@@ -2,7 +2,7 @@ const ArtifactBucketUpdateModal = {
     components: {
         'input-stepper': InputStepper,
     },
-    props: ['selectedBucket'],
+    props: ['selectedBucket', 'minioQuery'],
     data() {
         return {
             bucketData: {
@@ -36,7 +36,7 @@ const ArtifactBucketUpdateModal = {
         async fetchBucket() {
             // TODO rewrite session
             const api_url = this.$root.build_api_url('artifacts', 'artifacts')
-            const res = await fetch (`${api_url}/${getSelectedProjectId()}/${this.selectedBucket.name}`,{
+            const res = await fetch (`${api_url}/${getSelectedProjectId()}/${this.selectedBucket.name}${this.minioQuery}`,{
                 method: 'GET',
             })
             return res.json()
@@ -44,7 +44,7 @@ const ArtifactBucketUpdateModal = {
         saveBucket() {
             this.isLoading = true
             const api_url = this.$root.build_api_url('artifacts', 'buckets')
-            fetch(`${api_url}/${getSelectedProjectId()}`,{
+            fetch(`${api_url}/${getSelectedProjectId()}${this.minioQuery}`,{
                 method: 'PUT',
                 headers: {'Content-Type': 'application/json', dataType: 'json'},
                 body: JSON.stringify({
