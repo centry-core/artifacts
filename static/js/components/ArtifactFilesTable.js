@@ -60,6 +60,26 @@ const ArtifactFilesTable = {
                 }
             });
         },
+        downloadFile(fileName, index) {
+            const api_url = this.$root.build_api_url('artifacts', 'artifact')
+            $.ajax({
+                url: `${api_url}/${getSelectedProjectId()}/${this.selectedBucket.name}/${fileName}${this.minioQuery}`,
+                method: 'GET',
+                xhrFields: {
+                    responseType: 'blob'
+                },
+                success: function (data) {
+                    var a = document.createElement('a');
+                    var url = window.URL.createObjectURL(data);
+                    a.href = url;
+                    a.download = fileName;
+                    document.body.append(a);
+                    a.click();
+                    a.remove();
+                    window.URL.revokeObjectURL(url);
+                }
+            });
+        },
     },
     template: `
         <div class="card mt-3 mr-3 card-table-sm w-100" @dragover.prevent @drop.prevent>

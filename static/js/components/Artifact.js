@@ -20,16 +20,13 @@ const Artifact = {
             checkedBucketsList: [],
             projectIntegrations: [],
             selectedIntegration: undefined,
-            minioParams: {}
+            minioQuery: ''
         }
     },
     computed: {
         default_integration() {
             return this.projectIntegrations.find(item => item.is_default)
         },
-        minioQuery() {
-            return '?' + new URLSearchParams(this.minioParams)
-        }
     },
     mounted() {
         $(document).on('vue_init', () => {
@@ -75,7 +72,8 @@ const Artifact = {
                 this.projectIntegrations = await res.json()
                 this.selectedIntegration = this.get_integration_value(this.default_integration)
                 this.$nextTick(() => {
-                    $('#selector_integration').selectpicker('redner').selectpicker('refresh')
+                    $('#selector_integration').val(this.selectedIntegration)
+                    $('#selector_integration').selectpicker('refresh')
                 })
             } else {
                 console.warn('Couldn\'t fetch S3 integrations. Resp code: ', res.status)
@@ -160,7 +158,7 @@ const Artifact = {
         deleteBucket() {
             this.loadingDelete = true;
             const api_url = this.$root.build_api_url('artifacts', 'buckets')
-            fetch(`${api_url}/${this.$root.project_id}?name=${this.selectedBucket.name}${this.minioQuery}`, {
+            fetch(`${api_url}/${this.$root.project_id}${this.minioQuery}&name=${this.selectedBucket.name}`, {
                 method: 'DELETE',
             }).then((data) => {
                 this.refreshBucketTable();
@@ -174,7 +172,7 @@ const Artifact = {
             const api_url = this.$root.build_api_url('artifacts', 'buckets')
             const selectedBucketList = $("#bucket-table").bootstrapTable('getSelections')
                 .map(bucket => bucket.name.toLowerCase());
-            const urls = selectedBucketList.map(name => `${api_url}/${this.$root.project_id}?name=${name}${this.minioQuery}`)
+            const urls = selectedBucketList.map(name => `${api_url}/${this.$root.project_id}${this.minioQuery}&name=${name}`)
             this.loadingDelete = true;
             let chainPromises = Promise.resolve();
             urls.forEach((url) => {
@@ -198,15 +196,22 @@ const Artifact = {
         get_integration_value(integration) {
             return `${integration?.id}#${integration?.project_id}`
         },
+        is_default_integration(integration_id, is_local) {
+            console.log(this.default_integration)
+            return this.default_integration.id === integration_id &&
+                !!this.default_integration.project_id === is_local
+        },
         updateIntegration(integration_value) {
-            console.log(integration_value)
             const integration_id = parseInt(integration_value?.split('#')[0])
             const is_local = integration_value?.split('#')[1] !== 'null'
-            console.log(integration_id)
-            console.log(is_local)
-            this.minioParams = {integration_id, is_local}
-            console.log(this.minioParams)
+            if (this.is_default_integration(integration_id, is_local)) {
+                this.minioQuery = '';
+            }
+            else {
+                this.minioQuery = '?' + new URLSearchParams({integration_id, is_local});
+            }
             this.refreshBucketTable();
+            this.refreshArtifactTable(this.selectedBucket.name);
         },
     },
     template: ` 

@@ -16,7 +16,6 @@ const ArtifactBucketAside = {
             canSelectItems: false,
             loadingDelete: false,
             isShowSearch: false,
-            newSelectedIntegration: null
         }
     },
     computed: {
@@ -31,9 +30,6 @@ const ArtifactBucketAside = {
         isInitDataFetched() {
             this.setBucketEvents();
         },
-        newSelectedIntegration() {
-            this.$emit('update-selected-integration', this.newSelectedIntegration);
-        }
     },
     mounted() {
         const vm = this;
@@ -66,6 +62,9 @@ const ArtifactBucketAside = {
             if (vm.selectedBucket.id) {
                 $('#bucket-table').find(`[data-uniqueid='${vm.selectedBucket.id}']`).addClass('highlight');
             }
+        });
+        $('#selector_integration').on('change', (e) => {
+            this.$emit('update-selected-integration', e.target.value);
         })
     },
     methods: {
@@ -120,7 +119,7 @@ const ArtifactBucketAside = {
             </div>
             <div class="w-100 card px-4 pb-3">
                 <select id='selector_integration' class="selectpicker bootstrap-select__b" data-style="btn"
-                    v-model="newSelectedIntegration">
+                    >
                     <option
                         v-for="integration in projectIntegrations"
                         :value="get_integration_value(integration)"
