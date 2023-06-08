@@ -30,7 +30,8 @@ const ArtifactFilesTable = {
         },
         deleteFiles() {
             const api_url = this.$root.build_api_url('artifacts', 'artifacts')
-            let url = `${api_url}/${getSelectedProjectId()}/${this.selectedBucket.name}${this.minioQuery}&`
+            let url = `${api_url}/${getSelectedProjectId()}/${this.selectedBucket.name}`
+            this.minioQuery ? url += `${this.minioQuery}&` : url += `?`
             if ($("#artifact-table").bootstrapTable('getSelections').length > 0) {
                 $("#artifact-table").bootstrapTable('getSelections').forEach(item => {
                     url += "fname[]=" + item["name"] + "&"

@@ -157,8 +157,10 @@ const Artifact = {
         },
         deleteBucket() {
             this.loadingDelete = true;
-            const api_url = this.$root.build_api_url('artifacts', 'buckets')
-            fetch(`${api_url}/${this.$root.project_id}${this.minioQuery}&name=${this.selectedBucket.name}`, {
+            const api_url_part = this.$root.build_api_url('artifacts', 'buckets')
+            let url = `${api_url_part}/${this.$root.project_id}`
+            this.minioQuery ? url += `${this.minioQuery}&name=${this.selectedBucket.name}` : url += `?name=${this.selectedBucket.name}`
+            fetch(url, {
                 method: 'DELETE',
             }).then((data) => {
                 this.refreshBucketTable();
@@ -171,8 +173,14 @@ const Artifact = {
         deleteSelectedBuckets() {
             const api_url = this.$root.build_api_url('artifacts', 'buckets')
             const selectedBucketList = $("#bucket-table").bootstrapTable('getSelections')
-                .map(bucket => bucket.name.toLowerCase());
-            const urls = selectedBucketList.map(name => `${api_url}/${this.$root.project_id}${this.minioQuery}&name=${name}`)
+                .map(bucket => bucket.name.toLowerCase());       
+            const urls = selectedBucketList.map(name => {
+                if (this.minioQuery) {
+                    return `${api_url}/${this.$root.project_id}${this.minioQuery}&name=${name}`
+                } else {
+                    return`${api_url}/${this.$root.project_id}?name=${name}`
+                }     
+            })
             this.loadingDelete = true;
             let chainPromises = Promise.resolve();
             urls.forEach((url) => {
@@ -197,7 +205,6 @@ const Artifact = {
             return `${integration?.id}#${integration?.project_id}`
         },
         is_default_integration(integration_id, is_local) {
-            console.log(this.default_integration)
             return this.default_integration.id === integration_id &&
                 !!this.default_integration.project_id === is_local
         },

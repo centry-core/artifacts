@@ -95,7 +95,8 @@ class AdminAPI(api_tools.APIModeHandler):
             "developer": {"admin": True, "viewer": True, "editor": True},
         }})
     def get(self, bucket: str, **kwargs):
-        c = MinioClientAdmin()
+        integration_id = request.args.get('integration_id')
+        c = MinioClientAdmin(integration_id)
         try:
             lifecycle = c.get_bucket_lifecycle(bucket)
             retention_policy = calculate_readable_retention_policy(
@@ -116,10 +117,11 @@ class AdminAPI(api_tools.APIModeHandler):
             "developer": {"admin": True, "viewer": False, "editor": True},
         }})
     def post(self, bucket: str, **kwargs):
-        c = MinioClientAdmin()
+        integration_id = request.args.get('integration_id')
+        c = MinioClientAdmin(integration_id)
         if "file" in request.files:
             api_tools.upload_file_admin(
-                bucket, request.files["file"],
+                bucket, request.files["file"], integration_id,
                 create_if_not_exists=request.args.get('create_if_not_exists', True)
             )
         return {"message": "Done", "size": size(c.get_bucket_size(bucket))}, 200
@@ -133,7 +135,8 @@ class AdminAPI(api_tools.APIModeHandler):
         }})
     def delete(self, bucket: str, **kwargs):
         args = request.args
-        c = MinioClientAdmin()
+        integration_id = args.get('integration_id')
+        c = MinioClientAdmin(integration_id)
         if not args.get("fname[]"):
             c.remove_bucket(bucket)
         else:

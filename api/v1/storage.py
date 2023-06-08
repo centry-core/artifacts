@@ -61,8 +61,9 @@ class ProjectAPI(api_tools.APIModeHandler):
         elif integration_id:
             return 0, 0
         else:
-            default_integration = list(filter(lambda i: i.name == 's3_integration',
-                self.module.context.rpc_manager.call.integrations_get_defaults(project_id)))[0]
+            default_integration = self.module.context.rpc_manager.call.integrations_get_defaults(
+                project_id=project_id, name='s3_integration'
+            )
             if (default_integration.integration_id == CARRIER_MINIO_INTEGRATION_ID and 
                 default_integration.project_id == None):
                 storage_space_quota = self.module.context.rpc_manager.call.project_get_storage_space_quota(
@@ -75,7 +76,8 @@ class ProjectAPI(api_tools.APIModeHandler):
 class AdminAPI(api_tools.APIModeHandler):
     @auth.decorators.check_api(["configuration.artifacts.artifacts.view"])
     def get(self, **kwargs):
-        c = MinioClientAdmin()
+        integration_id = request.args.get('integration_id')
+        c = MinioClientAdmin(integration_id)
         buckets = c.list_bucket()
         bucket_types = {}
         total_size = 0

@@ -36,7 +36,8 @@ class ProjectAPI(api_tools.APIModeHandler):
 class AdminAPI(api_tools.APIModeHandler):
     @auth.decorators.check_api(["configuration.artifacts.artifacts.view"])
     def get(self, bucket: str, filename: str, **kwargs):
-        file = MinioClientAdmin().download_file(bucket, filename)
+        integration_id = request.args.get('integration_id')
+        file = MinioClientAdmin(integration_id).download_file(bucket, filename)
         try:
             return send_file(BytesIO(file), attachment_filename=filename)
         except TypeError:  # new flask
@@ -44,7 +45,8 @@ class AdminAPI(api_tools.APIModeHandler):
 
     @auth.decorators.check_api(["configuration.artifacts.artifacts.delete"])
     def delete(self, bucket: str, filename: str, **kwargs):
-        c = MinioClientAdmin()
+        integration_id = request.args.get('integration_id')
+        c = MinioClientAdmin(integration_id)
         c.remove_file(bucket, filename)
         return {"message": "Deleted", "size": size(c.get_bucket_size(bucket))}, 200
 
