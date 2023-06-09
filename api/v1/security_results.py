@@ -17,6 +17,8 @@ class API(Resource):
         test_type = request.args.get('test_type')
         if test_type == "sast":
             results = self.module.context.rpc_manager.call.security_sast_results_or_404(run_id=run_id)
+        elif test_type == "dependency":
+            results = self.module.context.rpc_manager.call.security_dependency_results_or_404(run_id=run_id)
         else:
             results = self.module.context.rpc_manager.call.security_results_or_404(run_id=run_id)
         minio_client = results.get_minio_client()
