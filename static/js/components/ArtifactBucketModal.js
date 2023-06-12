@@ -2,7 +2,7 @@ const ArtifactBucketModal = {
     components: {
         'input-stepper': InputStepper,
     },
-    props: ['bucket'],
+    props: ['bucket', 'minioQuery'],
     data() {
         return {
             bucketData: {
@@ -44,7 +44,7 @@ const ArtifactBucketModal = {
             const api_url = this.$root.build_api_url('artifacts', 'buckets')
             if (this.isValidBucket) {
                 this.isLoading = true;
-                fetch(`${api_url}/${getSelectedProjectId()}`,{
+                fetch(`${api_url}/${getSelectedProjectId()}${this.minioQuery}`,{
                     method: 'POST',
                     headers: {'Content-Type': 'application/json', dataType: 'json'},
                     body: JSON.stringify({
