@@ -28,7 +28,7 @@ const ArtifactBucketAside = {
         $('#bucketFilter').on('changed.bs.select', function ({ target: { value }}) {
             vm.$emit('update-bucket-list', []);
             $('#bucket-table').bootstrapTable('filterBy', {
-                tag: value.toLowerCase() ?? 'fuck'
+                tag: value.toLowerCase() ?? ''
             }, {
                 'filterAlgorithm': (row, filters) => {
                     const tag = filters ? filters.tag : 'all';
