@@ -1,5 +1,5 @@
 const ArtifactStorage = {
-    props: ['bucketCount'],
+    props: ['bucketCount', 'minioQuery'],
     data() {
         return {
             storage: {
@@ -62,7 +62,7 @@ const ArtifactStorage = {
         },
         async fetchStorage() {
             const api_url = this.$root.build_api_url('artifacts', 'storage')
-            const res = await fetch(`${api_url}/${getSelectedProjectId()}`, {
+            const res = await fetch(`${api_url}/${getSelectedProjectId()}${this.minioQuery}`, {
                 method: 'GET',
             })
             return res.json()

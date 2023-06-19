@@ -18,11 +18,20 @@ const Artifact = {
             showConfirm: false,
             bucketCount: 0,
             checkedBucketsList: [],
+            projectIntegrations: [],
+            selectedIntegration: undefined,
+            minioQuery: ''
         }
+    },
+    computed: {
+        default_integration() {
+            return this.projectIntegrations.find(item => item.is_default)
+        },
     },
     mounted() {
         $(document).on('vue_init', () => {
             const vm = this;
+            this.fetchS3Integrations()
             this.fetchBuckets().then(data => {
                 $("#bucket-table").bootstrapTable('append', data.rows);
                 this.setBucketEvent(data.rows)
@@ -53,16 +62,33 @@ const Artifact = {
                 vm.refreshArtifactTable(vm.selectedBucket.name);
             });
         },
+        async fetchS3Integrations() {
+            const api_url = this.$root.build_api_url('integrations', 'integrations')
+            const params = '?' + new URLSearchParams({name: 's3_integration'})
+            const res = await fetch(`${api_url}/${this.$root.project_id}${params}`, {
+                method: 'GET',
+            })
+            if (res.ok) {
+                this.projectIntegrations = await res.json()
+                this.selectedIntegration = this.get_integration_value(this.default_integration)
+                this.$nextTick(() => {
+                    $('#selector_integration').val(this.selectedIntegration)
+                    $('#selector_integration').selectpicker('refresh')
+                })
+            } else {
+                console.warn('Couldn\'t fetch S3 integrations. Resp code: ', res.status)
+            }
+        },
         async fetchArtifacts(bucket) {
             const api_url = this.$root.build_api_url('artifacts', 'artifacts')
-            const res = await fetch(`${api_url}/${this.$root.project_id}/${bucket}`, {
+            const res = await fetch(`${api_url}/${this.$root.project_id}/${bucket}${this.minioQuery}`, {
                 method: 'GET',
             })
             return res.json();
         },
         async fetchBuckets() {
             const api_url = this.$root.build_api_url('artifacts', 'buckets')
-            const res = await fetch(`${api_url}/${this.$root.project_id}`, {
+            const res = await fetch(`${api_url}/${this.$root.project_id}${this.minioQuery}`, {
                 method: 'GET',
             })
             return res.json();
@@ -131,8 +157,10 @@ const Artifact = {
         },
         deleteBucket() {
             this.loadingDelete = true;
-            const api_url = this.$root.build_api_url('artifacts', 'buckets')
-            fetch(`${api_url}/${this.$root.project_id}?name=${this.selectedBucket.name}`, {
+            const api_url_part = this.$root.build_api_url('artifacts', 'buckets')
+            let url = `${api_url_part}/${this.$root.project_id}`
+            this.minioQuery ? url += `${this.minioQuery}&name=${this.selectedBucket.name}` : url += `?name=${this.selectedBucket.name}`
+            fetch(url, {
                 method: 'DELETE',
             }).then((data) => {
                 this.refreshBucketTable();
@@ -145,8 +173,14 @@ const Artifact = {
         deleteSelectedBuckets() {
             const api_url = this.$root.build_api_url('artifacts', 'buckets')
             const selectedBucketList = $("#bucket-table").bootstrapTable('getSelections')
-                .map(bucket => bucket.name.toLowerCase());
-            const urls = selectedBucketList.map(name => `${api_url}/${this.$root.project_id}?name=${name}`)
+                .map(bucket => bucket.name.toLowerCase());       
+            const urls = selectedBucketList.map(name => {
+                if (this.minioQuery) {
+                    return `${api_url}/${this.$root.project_id}${this.minioQuery}&name=${name}`
+                } else {
+                    return`${api_url}/${this.$root.project_id}?name=${name}`
+                }     
+            })
             this.loadingDelete = true;
             let chainPromises = Promise.resolve();
             urls.forEach((url) => {
@@ -166,31 +200,57 @@ const Artifact = {
         },
         updateBucketList(buckets) {
             this.checkedBucketsList = buckets;
-        }
+        },
+        get_integration_value(integration) {
+            return `${integration?.id}#${integration?.project_id}`
+        },
+        is_default_integration(integration_id, is_local) {
+            return this.default_integration.id === integration_id &&
+                !!this.default_integration.project_id === is_local
+        },
+        updateIntegration(integration_value) {
+            const integration_id = parseInt(integration_value?.split('#')[0])
+            const is_local = integration_value?.split('#')[1] !== 'null'
+            if (this.is_default_integration(integration_id, is_local)) {
+                this.minioQuery = '';
+            }
+            else {
+                this.minioQuery = '?' + new URLSearchParams({integration_id, is_local});
+            }
+            this.refreshBucketTable();
+            this.refreshArtifactTable(this.selectedBucket.name);
+        },
     },
     template: ` 
         <main class="d-flex align-items-start justify-content-center mb-3">
             <artifact-bucket-aside
                 @open-confirm="openConfirm"
                 @update-bucket-list="updateBucketList"
+                @update-selected-integration="updateIntegration"
                 :checked-buckets-list="checkedBucketsList"
                 :bucket-count="bucketCount"
                 :selected-bucket="selectedBucket"
                 :selected-bucket-row-index="selectedBucketRowIndex"
-                :is-init-data-fetched="isInitDataFetched">
+                :is-init-data-fetched="isInitDataFetched"
+                :project-integrations="projectIntegrations"
+                :selected-integration="selectedIntegration"
+                :minio-query="minioQuery">
             </artifact-bucket-aside>
             <artifact-files-table
                 @register="$root.register"
                 instance_name="artifactFiles"
                 :selected-bucket="selectedBucket"
+                :minio-query="minioQuery"
                 @refresh="refresh">
             </artifact-files-table>
             <artifact-bucket-modal
+                :minio-query="minioQuery"
                 @refresh-bucket="refreshBucketTable">
             </artifact-bucket-modal>
             <artifact-bucket-update-modal
                 @refresh-policy="updateFilesRetentionPolicy"
-                :selected-bucket="selectedBucket">
+                :selected-bucket="selectedBucket"
+                :minio-query="minioQuery">
             </artifact-bucket-update-modal>
             <artifact-confirm-modal
                 v-if="showConfirm"

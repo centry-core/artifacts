@@ -6,6 +6,7 @@ from hurry.filesize import size
 
 from flask import request
 
+from pylon.core.tools import log
 from tools import MinioClient, MinioClientAdmin, api_tools, auth
 
 
@@ -26,7 +27,9 @@ class ProjectAPI(api_tools.APIModeHandler):
     @auth.decorators.check_api(["configuration.artifacts.artifacts.view"])
     def get(self, project_id: int):
         project = self.module.context.rpc_manager.call.project_get_or_404(project_id=project_id)
-        c = MinioClient(project)
+        integration_id = request.args.get('integration_id')
+        is_local = request.args.get('is_local', '').lower() == 'true'
+        c = MinioClient(project, integration_id, is_local)
         buckets = c.list_bucket()
         rows = []
         for bucket in buckets:
@@ -45,14 +48,16 @@ class ProjectAPI(api_tools.APIModeHandler):
     @auth.decorators.check_api(["configuration.artifacts.artifacts.create"])
     def post(self, project_id: int):
         args = request.json
-        bucket = args.get("name")
+        bucket = args.get("name").replace("_", "").replace(" ", "").lower()
         if not bucket:
             return {"message": "Name of bucket not provided"}, 400
         expiration_measure = args.get("expiration_measure")
         expiration_value = args.get("expiration_value")
+        integration_id = request.args.get('integration_id')
+        is_local = request.args.get('is_local', '').lower() == 'true'
 
         project = self.module.context.rpc_manager.call.project_get_or_404(project_id=project_id)
-        minio_client = MinioClient(project=project)
+        minio_client = MinioClient(project, integration_id, is_local)
         days = calculate_retention_days(project, expiration_value, expiration_measure)
         response = minio_client.create_bucket(bucket=bucket, bucket_type='local')
         if isinstance(response, dict) and response['Location'] and days:
@@ -70,14 +75,16 @@ class ProjectAPI(api_tools.APIModeHandler):
         }})
     def put(self, project_id: int):
         args = request.json
-        bucket = args.get("name")
+        bucket = args.get("name").replace("_", "").replace(" ", "").lower()
         if not bucket:
             return {"message": "Name of bucket not provided"}, 400
         expiration_measure = args.get("expiration_measure")
         expiration_value = args.get("expiration_value")
+        integration_id = request.args.get('integration_id')
+        is_local = request.args.get('is_local', '').lower() == 'true'
 
         project = self.module.context.rpc_manager.call.project_get_or_404(project_id=project_id)
-        minio_client = MinioClient(project=project)
+        minio_client = MinioClient(project, integration_id, is_local)
         days = calculate_retention_days(project, expiration_value, expiration_measure)
         if days:
             try:
@@ -90,15 +97,18 @@ class ProjectAPI(api_tools.APIModeHandler):
 
     @auth.decorators.check_api(["configuration.artifacts.artifacts.delete"])
     def delete(self, project_id: int):
+        integration_id = request.args.get('integration_id')
+        is_local = request.args.get('is_local', '').lower() == 'true'
         project = self.module.context.rpc_manager.call.project_get_or_404(project_id=project_id)
-        MinioClient(project=project).remove_bucket(request.args["name"])
+        MinioClient(project, integration_id, is_local).remove_bucket(request.args["name"])
         return {"message": "Deleted"}, 200
 
 
 class AdminAPI(api_tools.APIModeHandler):
     @auth.decorators.check_api(["configuration.artifacts.artifacts.view"])
     def get(self, **kwargs):
-        c = MinioClientAdmin()
+        integration_id = request.args.get('integration_id')
+        c = MinioClientAdmin(integration_id)
         buckets = c.list_bucket()
         rows = []
         for bucket in buckets:
@@ -116,11 +126,12 @@ class AdminAPI(api_tools.APIModeHandler):
     @auth.decorators.check_api(["configuration.artifacts.artifacts.create"])
     def post(self, **kwargs):
         args = request.json
-        bucket = args.get("name")
+        bucket = args.get("name").replace("_", "").replace(" ", "").lower()
         if not bucket:
             return {"message": "Name of bucket not provided"}, 400
         expiration_measure = args.get("expiration_measure")
         expiration_value = args.get("expiration_value")
+        integration_id = request.args.get('integration_id')
         days = None
         if expiration_value and expiration_measure:
             today_date = datetime.today().date()
@@ -128,7 +139,7 @@ class AdminAPI(api_tools.APIModeHandler):
             time_delta = expiration_date - today_date
             days = time_delta.days
 
-        c = MinioClientAdmin()
+        c = MinioClientAdmin(integration_id)
         response = c.create_bucket(bucket=bucket, bucket_type='local')
         if isinstance(response, dict) and response['Location'] and days:
             c.configure_bucket_lifecycle(bucket=bucket, days=days)
@@ -139,13 +150,13 @@ class AdminAPI(api_tools.APIModeHandler):
     @auth.decorators.check_api(["configuration.artifacts.artifacts.edit"])
     def put(self, **kwargs):
         args = request.json
-        bucket = args.get("name")
+        bucket = args.get("name").replace("_", "").replace(" ", "").lower()
         if not bucket:
             return {"message": "Name of bucket not provided"}, 400
         expiration_measure = args.get("expiration_measure")
         expiration_value = args.get("expiration_value")
-
-        c = MinioClientAdmin()
+        integration_id = request.args.get('integration_id')
+        c = MinioClientAdmin(integration_id)
         if expiration_value and expiration_measure:
             today_date = datetime.today().date()
             expiration_date = today_date + relativedelta(**{expiration_measure: int(expiration_value)})
@@ -161,7 +172,8 @@ class AdminAPI(api_tools.APIModeHandler):
 
     @auth.decorators.check_api(["configuration.artifacts.artifacts.delete"])
     def delete(self, **kwargs):
-        MinioClientAdmin().remove_bucket(request.args["name"])
+        integration_id = request.args.get('integration_id')
+        MinioClientAdmin(integration_id).remove_bucket(request.args["name"])
         return {"message": "Deleted"}, 200
 
 
