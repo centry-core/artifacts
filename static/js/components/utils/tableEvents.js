@@ -20,14 +20,8 @@ var filesFormatter = {
                     <i class="icon__18x18 icon-menu-dots"></i>
                 </button>
                 <ul class="dropdown-menu">
-                    <li class="dropdown-menu_item dropdown-item">
-                        <a 
-                            class="d-flex align-items-center"
-                            download
-                            href="${V.build_api_url('artifacts', 'artifact')}/${getSelectedProjectId()}/${V.artifact.selectedBucket.name}/${row.name}"
-                        >
-                                <i class="icon__18x18 icon-download mr-2"></i><span class="w-100 font-h5">Download</span>
-                        </a>
+                    <li class="dropdown-menu_item dropdown-item d-flex align-items-center file_download">
+                        <i class="icon__18x18 icon-download mr-2"></i><span class="w-100 font-h5">Download</span>
                     </li>
                     <li class="dropdown-menu_item dropdown-item d-flex align-items-center file_delete">
                         <i class="icon__18x18 icon-delete mr-2"></i><span class="w-100 font-h5">Delete</span>
@@ -39,6 +33,9 @@ var filesFormatter = {
     `
     },
     events: {
+        "click .file_download": function (e, value, row, index) {
+            vueVm.registered_components.artifactFiles.downloadFile(row.name, index);
+        },
         "click .file_delete": function (e, value, row, index) {
             vueVm.registered_components.artifactFiles.deleteFile(row.name, index);
         },
