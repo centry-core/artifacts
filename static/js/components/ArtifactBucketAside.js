@@ -111,26 +111,6 @@ const ArtifactBucketAside = {
     },
     template: `
         <aside class="m-3 card card-table-sm" style="width: 450px">
-
-            <div class="row p-4">
-                <div class="col-4">
-                    <h4>Storage</h4>
-                </div>
-            </div>
-            <div class="w-100 card px-4 pb-3">
-                <select id='selector_integration' class="selectpicker bootstrap-select__b" data-style="btn"
-                    >
-                    <option
-                        v-for="integration in projectIntegrations"
-                        :value="get_integration_value(integration)"
-                        :title="getIntegrationTitle(integration)"
-                        :key="integration"
-                    >
-                        {{ getIntegrationTitle(integration) }}
-                    </option>
-                </select>
-            </div> 
-
             <div class="row p-4">
                 <div class="col-4">
                     <p class="font-h4 font-bold">Bucket</p>
@@ -161,13 +141,25 @@ const ArtifactBucketAside = {
                 </div>
             </div>
             <div class="w-100 card px-4" style="box-shadow: none">
-                <div v-show="isShowSearch" class="custom-input custom-input_search__sm custom-input__sm position-relative mb-3">
+                <div v-show="isShowSearch" class="custom-input custom-input_search__sm custom-input__sm position-relative mb-2">
                     <input
                         id="bucketSearch"
                         type="text"
                         placeholder="Bucket name">
                     <img src="/design-system/static/assets/ico/search.svg" class="icon-search position-absolute">
                 </div>
+                <p class="font-h6 font-semibold mb-1">Storage</p>
+                <select id='selector_integration' class="selectpicker bootstrap-select__b bootstrap-select__b-sm" data-style="btn">
+                    <option
+                        v-for="integration in projectIntegrations"
+                        :value="get_integration_value(integration)"
+                        :title="getIntegrationTitle(integration)"
+                        :key="integration"
+                    >
+                        {{ getIntegrationTitle(integration) }}
+                    </option>
+                </select>
+                <p class="font-h6 font-semibold mb-1 mt-2">Bucket type</p>
                 <select id="bucketFilter" class="selectpicker bootstrap-select__b bootstrap-select__b-sm" data-style="btn">
                     <option>All</option>
                     <option>Local</option>
