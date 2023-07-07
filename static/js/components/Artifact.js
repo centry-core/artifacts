@@ -110,7 +110,6 @@ const Artifact = {
                 this.bucketCount = data.rows.length;
                 $('#bucket-table').off('click', 'tbody tr:not(.no-records-found)')
                 this.setBucketEvent(data.rows);
-                console.log(bucketId)
                 if (bucketId) {
                     this.selectedBucket = data.rows.find(row => row.id === bucketId);
                     $('#bucket-table').find(`[data-uniqueid='${bucketId}']`).addClass('highlight');
@@ -217,8 +216,16 @@ const Artifact = {
             else {
                 this.minioQuery = '?' + new URLSearchParams({integration_id, is_local});
             }
-            this.refreshBucketTable();
-            this.refreshArtifactTable(this.selectedBucket.name);
+            this.fetchBuckets().then(data => {
+                $("#bucket-table").bootstrapTable('load', data.rows);
+                this.bucketCount = data.rows.length;
+                $('#bucket-table').off('click', 'tbody tr:not(.no-records-found)')
+                if (data.rows.length > 0) {
+                    this.setBucketEvent(data.rows);
+                    this.selectFirstBucket();
+                    this.refreshArtifactTable(this.selectedBucket.name)
+                }
+            })
         },
     },
     template: ` 
