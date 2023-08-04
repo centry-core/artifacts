@@ -54,10 +54,10 @@ class ProjectAPI(api_tools.APIModeHandler):
 
     def _get_space_quota(self, project_id, total_size, integration_id, is_local):
         if integration_id and int(integration_id) == CARRIER_MINIO_INTEGRATION_ID and is_local != True:
-            storage_space_quota = self.module.context.rpc_manager.call.project_get_storage_space_quota(
+            soft_lomit, hard_limit = self.module.context.rpc_manager.call.project_get_storage_space_quota(
                 project_id=project_id
                 )
-            return storage_space_quota, storage_space_quota - total_size
+            return hard_limit, hard_limit - total_size
         elif integration_id:
             return 0, 0
         else:
@@ -66,10 +66,10 @@ class ProjectAPI(api_tools.APIModeHandler):
             )
             if (default_integration.integration_id == CARRIER_MINIO_INTEGRATION_ID and 
                 default_integration.project_id == None):
-                storage_space_quota = self.module.context.rpc_manager.call.project_get_storage_space_quota(
+                soft_lomit, hard_limit = self.module.context.rpc_manager.call.project_get_storage_space_quota(
                     project_id=project_id
                     )
-                return storage_space_quota, storage_space_quota - total_size
+                return hard_limit, hard_limit - total_size
             else:
                 return 0, 0
 
