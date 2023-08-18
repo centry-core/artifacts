@@ -22,7 +22,10 @@ class API(Resource):
         else:
             results = self.module.context.rpc_manager.call.security_results_or_404(run_id=run_id)
         minio_client = results.get_minio_client()
-        files = minio_client.list_files(results.bucket_name)
+        files = [
+            item for item in minio_client.list_files(results.bucket_name)
+            if str(results.build_id) in item["name"]
+        ]
         for each in files:
             each["size"] = size(each["size"])
         return files

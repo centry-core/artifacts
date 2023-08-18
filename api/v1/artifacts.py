@@ -59,6 +59,7 @@ class ProjectAPI(api_tools.APIModeHandler):
         is_local = request.args.get('is_local', '').lower() == 'true'
         mc = MinioClient(project, integration_id, is_local)
         if "file" in request.files:
+            # log.info('Minio upload api %s ', request.files)
             api_tools.upload_file(
                 bucket, request.files["file"], project, integration_id, is_local,
                 create_if_not_exists=request.args.get('create_if_not_exists', True)
