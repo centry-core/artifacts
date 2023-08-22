@@ -34,7 +34,7 @@ const ArtifactFilesTable = {
             this.minioQuery ? url += `${this.minioQuery}&` : url += `?`
             if ($("#artifact-table").bootstrapTable('getSelections').length > 0) {
                 $("#artifact-table").bootstrapTable('getSelections').forEach(item => {
-                    url += "fname[]=" + item["name"] + "&"
+                    url += "fname[]=" + encodeURIComponent(item["name"]) + "&"
                 });
                 $.ajax({
                     url: url.substring(0, url.length - 1),
@@ -63,8 +63,9 @@ const ArtifactFilesTable = {
         },
         downloadFile(fileName, index) {
             const api_url = this.$root.build_api_url('artifacts', 'artifact')
+            const url = `${api_url}/${getSelectedProjectId()}/${this.selectedBucket.name}/${encodeURIComponent(fileName)}${this.minioQuery}`
             $.ajax({
-                url: `${api_url}/${getSelectedProjectId()}/${this.selectedBucket.name}/${fileName}${this.minioQuery}`,
+                url: url,
                 method: 'GET',
                 xhrFields: {
                     responseType: 'blob'
