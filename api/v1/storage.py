@@ -52,26 +52,30 @@ class ProjectAPI(api_tools.APIModeHandler):
                 },
             }, 200
 
-    def _get_space_quota(self, project_id, total_size, integration_id, is_local):
-        if integration_id and int(integration_id) == CARRIER_MINIO_INTEGRATION_ID and is_local != True:
-            soft_lomit, hard_limit = self.module.context.rpc_manager.call.project_get_storage_space_quota(
-                project_id=project_id
-                )
-            return hard_limit, hard_limit - total_size
-        elif integration_id:
-            return 0, 0
-        else:
-            default_integration = self.module.context.rpc_manager.call.integrations_get_defaults(
-                project_id=project_id, name='s3_integration'
-            )
-            if (default_integration.integration_id == CARRIER_MINIO_INTEGRATION_ID and 
-                default_integration.project_id == None):
+    def _get_space_quota(self, project_id, total_size, integration_id, is_local) -> tuple[int, int]:
+        try:
+            if integration_id and int(integration_id) == CARRIER_MINIO_INTEGRATION_ID and is_local != True:
                 soft_lomit, hard_limit = self.module.context.rpc_manager.call.project_get_storage_space_quota(
                     project_id=project_id
                     )
                 return hard_limit, hard_limit - total_size
-            else:
+            elif integration_id:
                 return 0, 0
+            else:
+                default_integration = self.module.context.rpc_manager.call.integrations_get_defaults(
+                    project_id=project_id, name='s3_integration'
+                )
+                if (default_integration.integration_id == CARRIER_MINIO_INTEGRATION_ID and
+                    default_integration.project_id == None):
+                    soft_lomit, hard_limit = self.module.context.rpc_manager.call.project_get_storage_space_quota(
+                        project_id=project_id
+                        )
+                    return hard_limit, hard_limit - total_size
+                else:
+                    return 0, 0
+        except TypeError:
+            # happens if limit or lomit are None
+            return 0, 0
 
 class AdminAPI(api_tools.APIModeHandler):
     @auth.decorators.check_api(["configuration.artifacts.artifacts.view"])
