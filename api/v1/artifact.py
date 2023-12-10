@@ -15,7 +15,7 @@ class ProjectAPI(api_tools.APIModeHandler):
         is_local = request.args.get('is_local', '').lower() == 'true'
         try:
             file = MinioClient(project, integration_id, is_local).download_file(bucket, filename)
-        except ClientError:
+        except:  # pylint: disable=W0702
             log.warning('File %s/%s was not found in project bucket. Looking in admin...', bucket, filename)
             file = MinioClientAdmin().download_file(bucket, filename, project_id)
         try:
