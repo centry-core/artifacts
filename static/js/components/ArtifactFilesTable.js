@@ -3,6 +3,7 @@ const ArtifactFilesTable = {
     data() {
         return {
             taskResults: {},
+            url_prefix: window.url_prefix,
         }
     },
     methods: {
@@ -87,12 +88,12 @@ const ArtifactFilesTable = {
         <div class="card mt-3 mr-3 card-table-sm w-100" @dragover.prevent @drop.prevent>
             <div class="row pt-4 px-24">
                 <div class="col-4">
-                    <p class="font-h4 font-bold">Bucket {{ selectedBucket.name }}</p>   
+                    <p class="font-h4 font-bold">Bucket {{ selectedBucket.name }}</p>
                     <p class="font-h6 font-weight-400">Retention policy - <span id="filesRetentionPolicy"></span></p>
                 </div>
                 <div class="col-8">
                     <div class="d-flex justify-content-end">
-                        <button type="button" 
+                        <button type="button"
                             @click="deleteFiles"
                             class="btn btn-secondary btn-icon btn-icon__purple">
                             <i class="icon__18x18 icon-delete"></i>
@@ -107,8 +108,8 @@ const ArtifactFilesTable = {
                     data-unique-id="id"
                     data-page-list="[5, 10, 15]"
                     data-pagination="true"
-                    data-pagination-pre-text="<img src='/design-system/static/assets/ico/arrow_left.svg'>"
-                    data-pagination-next-text="<img src='/design-system/static/assets/ico/arrow_right.svg'>"
+                    data-pagination-pre-text="<img src='{{ url_prefix }}/design-system/static/assets/ico/arrow_left.svg'>"
+                    data-pagination-next-text="<img src='{{ url_prefix }}/design-system/static/assets/ico/arrow_right.svg'>"
                     data-page-size=5>
                     <thead class="thead-light">
                         <tr>
@@ -118,8 +119,8 @@ const ArtifactFilesTable = {
                             <th scope="col" data-sortable="true" data-cell-style="styleNoWrapText" data-field="modified"
                                 data-formatter="filesFormatter.modified"
                             >LAST UPDATE</th>
-                            <th scope="col" data-field="actions" data-align="right" 
-                                data-formatter="filesFormatter.actions" 
+                            <th scope="col" data-field="actions" data-align="right"
+                                data-formatter="filesFormatter.actions"
                                 data-events="filesFormatter.events"></th>
                         </tr>
                     </thead>

@@ -2,10 +2,10 @@ const ArtifactBucketAside = {
     components: {
         'artifact-storage': ArtifactStorage,
     },
-    props: ['isInitDataFetched', 
-            'selectedBucketRowIndex', 
-            'selectedBucket', 
-            'bucketCount', 
+    props: ['isInitDataFetched',
+            'selectedBucketRowIndex',
+            'selectedBucket',
+            'bucketCount',
             'checkedBucketsList',
             'projectIntegrations',
             'selectedIntegration',
@@ -16,6 +16,7 @@ const ArtifactBucketAside = {
             canSelectItems: false,
             loadingDelete: false,
             isShowSearch: false,
+            url_prefix: window.url_prefix,
         }
     },
     computed: {
@@ -118,7 +119,7 @@ const ArtifactBucketAside = {
                 <div class="col-8">
                     <div class="d-flex justify-content-end">
                         <button type="button"
-                             data-toggle="modal" 
+                             data-toggle="modal"
                              data-target="#bucketModal"
                              class="btn btn-basic btn-icon mr-2">
                             <i class="icon__14x14 icon-plus__big icon__white"></i>
@@ -131,7 +132,7 @@ const ArtifactBucketAside = {
                             @click="switchSelectItems">
                             <i class="icon__18x18 icon-multichoice"></i>
                         </button>
-                        <button type="button" 
+                        <button type="button"
                             @click="$emit('open-confirm', 'multiple')"
                             :disabled="!isAnyBucketSelected"
                             class="btn btn-secondary btn-icon btn-icon__purple">
@@ -146,7 +147,7 @@ const ArtifactBucketAside = {
                         id="bucketSearch"
                         type="text"
                         placeholder="Bucket name">
-                    <img src="/design-system/static/assets/ico/search.svg" class="icon-search position-absolute">
+                    <img src="{{ url_prefix }}/design-system/static/assets/ico/search.svg" class="icon-search position-absolute">
                 </div>
                 <p class="font-h6 font-semibold mb-1">Storage</p>
                 <select id='selector_integration' class="selectpicker bootstrap-select__b bootstrap-select__b-sm" data-style="btn">
@@ -172,10 +173,10 @@ const ArtifactBucketAside = {
                     id="bucket-table"
                     data-toggle="table"
                     data-unique-id="id"
-                    data-sort-name="name" 
+                    data-sort-name="name"
                     data-sort-order="asc"
-                    data-pagination-pre-text="<img src='/design-system/static/assets/ico/arrow_left.svg'>"
-                    data-pagination-next-text="<img src='/design-system/static/assets/ico/arrow_right.svg'>">
+                    data-pagination-pre-text="<img src='{{ url_prefix }}/design-system/static/assets/ico/arrow_left.svg'>"
+                    data-pagination-next-text="<img src='{{ url_prefix }}/design-system/static/assets/ico/arrow_right.svg'>">
                     <thead class="thead-light bg-transparent">
                         <tr>
                             <th data-visible="false" data-field="id">index</th>
