@@ -70,7 +70,7 @@ const ArtifactStorage = {
     },
     template: `
     <div>
-        <div class="d-flex justify-content-between align-items-center pl-3 pr-1 pt-2 pb-1" style="border-top: solid 1px #EAEDEF">
+        <div class="d-flex justify-content-between align-items-center pl-3 pr-1 pt-2 pb-1 storage-container" style="border-top: solid 1px #EAEDEF">
             <p class="font-h5 font-semibold text-gray-700 font-h6">Storage use</p>
             <div class="dropdown_info dropup">
                 <button class="btn btn-select dropdown-toggle font-weight-400 font-h6" type="button"
