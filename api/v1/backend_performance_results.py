@@ -26,7 +26,7 @@ class API(Resource):
         build_id: str = test_data.build_id
         custom_files_prefix = f'reports_test_results_{build_id}'
         log_file_name = f'{build_id}.log'
-        ai_summary_file_name = f'{build_id}_AI_summary.log'
+        ai_summary_file_name = f'{build_id}_llm_reports.zip'
         for f in minio_files:
             name: str = f["name"]
             if name == log_file_name or name.startswith(custom_files_prefix) or name == ai_summary_file_name:
