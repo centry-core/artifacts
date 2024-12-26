@@ -9,9 +9,9 @@ const ArtifactFilesTable = {
     methods: {
         uploadFiles(e) {
             const files = e.dataTransfer.files;
-            files.forEach((file) => {
+            Array.from(files).forEach(file => {
                 this._uploadFile(file);
-            })
+            });
         },
         _uploadFile(file) {
             const formData = new FormData()
