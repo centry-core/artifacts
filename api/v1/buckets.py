@@ -62,7 +62,11 @@ class ProjectAPI(api_tools.APIModeHandler):
         response = minio_client.create_bucket(bucket=bucket, bucket_type='local')
         if isinstance(response, dict) and response['Location'] and days:
             minio_client.configure_bucket_lifecycle(bucket=bucket, days=days)
-            return {"message": "Created", "id": response['Location'].lstrip('/')}, 200
+            return {
+                "message": "Created",
+                "id": response['Location'].lstrip('/'),
+                'name': minio_client.purify_bucket_name(bucket)
+            }, 200
         else:
             return {"message": response}, 400
 
@@ -139,11 +143,15 @@ class AdminAPI(api_tools.APIModeHandler):
             time_delta = expiration_date - today_date
             days = time_delta.days
 
-        c = MinioClientAdmin(integration_id)
-        response = c.create_bucket(bucket=bucket, bucket_type='local')
+        mc = MinioClientAdmin(integration_id)
+        response = mc.create_bucket(bucket=bucket, bucket_type='local')
         if isinstance(response, dict) and response['Location'] and days:
-            c.configure_bucket_lifecycle(bucket=bucket, days=days)
-            return {"message": "Created", "id": response['Location'].lstrip('/')}, 200
+            mc.configure_bucket_lifecycle(bucket=bucket, days=days)
+            return {
+                "message": "Created",
+                "id": response['Location'].lstrip('/'),
+                'name': mc.purify_bucket_name(bucket)
+            }, 200
         else:
             return {"message": response}, 400
 
