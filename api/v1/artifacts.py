@@ -41,10 +41,14 @@ class ProjectAPI(api_tools.APIModeHandler):
                 )
         except Exception:
             retention_policy = None
-        files = mc.list_files(bucket)
-        for each in files:
-            each["size"] = size(each["size"])
-        return {"retention_policy": retention_policy, "total": len(files), "rows": files}
+        try:
+            files = mc.list_files(bucket)
+            for each in files:
+                each["size"] = size(each["size"])
+            return {"retention_policy": retention_policy, "total": len(files), "rows": files}
+        except Exception as e:
+            return {"error": str(e)}, 400
+
 
     @auth.decorators.check_api({
         "permissions": ["configuration.artifacts.artifacts.create"],
@@ -97,18 +101,21 @@ class AdminAPI(api_tools.APIModeHandler):
         }})
     def get(self, bucket: str, **kwargs):
         integration_id = request.args.get('integration_id')
-        c = MinioClientAdmin(integration_id)
+        mc = MinioClientAdmin(integration_id)
         try:
-            lifecycle = c.get_bucket_lifecycle(bucket)
+            lifecycle = mc.get_bucket_lifecycle(bucket)
             retention_policy = calculate_readable_retention_policy(
                 days=lifecycle["Rules"][0]['Expiration']['Days']
             )
         except Exception:
             retention_policy = None
-        files = c.list_files(bucket)
-        for each in files:
-            each["size"] = size(each["size"])
-        return {"retention_policy": retention_policy, "total": len(files), "rows": files}
+        try:
+            files = mc.list_files(bucket)
+            for each in files:
+                each["size"] = size(each["size"])
+            return {"retention_policy": retention_policy, "total": len(files), "rows": files}
+        except Exception as e:
+            return {"error": str(e)}, 400
 
     @auth.decorators.check_api({
         "permissions": ["configuration.artifacts.artifacts.create"],
