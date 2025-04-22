@@ -1,3 +1,4 @@
+import re
 from datetime import datetime
 
 from dateutil.relativedelta import relativedelta
@@ -51,6 +52,18 @@ class ProjectAPI(api_tools.APIModeHandler):
         bucket = args.get("name").replace("_", "").replace(" ", "").lower()
         if not bucket:
             return {"message": "Name of bucket not provided"}, 400
+
+        # regular expression to validate bucket name
+        # ^[a-zA-Z] ensures the name starts with a letter
+        # [a-zA-Z0-9-]* ensures the rest of the name contains only letters, numbers, and hyphens
+        bucket_pattern = r"^[a-zA-Z][a-zA-Z0-9-]*$"
+
+        if not re.match(bucket_pattern, bucket):
+            return {
+                "message": "Invalid bucket name. Bucket name must start with a "
+                "letter and contain only letters, numbers, and hyphens."
+            }, 400
+
         expiration_measure = args.get("expiration_measure")
         expiration_value = args.get("expiration_value")
         integration_id = request.args.get('integration_id')
