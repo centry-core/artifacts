@@ -29,6 +29,14 @@ class ProjectAPI(api_tools.APIModeHandler):
     def get(self, project_id: int):
         project = self.module.context.rpc_manager.call.project_get_or_404(project_id=project_id)
         integration_id = request.args.get('integration_id')
+        if integration_id is None:
+            return {"error": "integration_id is required"}, 400
+
+        try:
+            integration_id = int(integration_id)
+        except ValueError:
+            return {"error": "integration_id must be an integer"}, 400
+
         is_local = request.args.get('is_local', '').lower() == 'true'
         c = MinioClient(project, integration_id, is_local)
         buckets = c.list_bucket()
