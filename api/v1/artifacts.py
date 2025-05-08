@@ -73,9 +73,9 @@ class ProjectAPI(api_tools.APIModeHandler):
     @auth.decorators.check_api({
         "permissions": ["configuration.artifacts.artifacts.delete"],
         "recommended_roles": {
-            "administration": {"admin": True, "viewer": False, "editor": False},
-            "default": {"admin": True, "viewer": False, "editor": False},
-            "developer": {"admin": True, "viewer": False, "editor": False},
+            "administration": {"admin": True, "viewer": False, "editor": True},
+            "default": {"admin": True, "viewer": False, "editor": True},
+            "developer": {"admin": True, "viewer": False, "editor": True},
         }})
     def delete(self, project_id: int, bucket: str):
         args = request.args
@@ -137,9 +137,9 @@ class AdminAPI(api_tools.APIModeHandler):
     @auth.decorators.check_api({
         "permissions": ["configuration.artifacts.artifacts.delete"],
         "recommended_roles": {
-            "administration": {"admin": True, "viewer": False, "editor": False},
-            "default": {"admin": True, "viewer": False, "editor": False},
-            "developer": {"admin": True, "viewer": False, "editor": False},
+            "administration": {"admin": True, "viewer": False, "editor": True},
+            "default": {"admin": True, "viewer": False, "editor": True},
+            "developer": {"admin": True, "viewer": False, "editor": True},
         }})
     def delete(self, bucket: str, **kwargs):
         args = request.args
