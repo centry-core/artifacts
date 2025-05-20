@@ -54,7 +54,7 @@ class ProjectAPI(api_tools.APIModeHandler):
         "permissions": ["configuration.artifacts.artifacts.create"],
         "recommended_roles": {
             "administration": {"admin": True, "viewer": False, "editor": True},
-            "default": {"admin": True, "viewer": False, "editor": True},
+            "default": {"admin": True, "viewer": True, "editor": True},
             "developer": {"admin": True, "viewer": False, "editor": True},
         }})
     def post(self, project_id: int, bucket: str):
@@ -117,13 +117,7 @@ class AdminAPI(api_tools.APIModeHandler):
         except Exception as e:
             return {"error": str(e)}, 400
 
-    @auth.decorators.check_api({
-        "permissions": ["configuration.artifacts.artifacts.create"],
-        "recommended_roles": {
-            "administration": {"admin": True, "viewer": False, "editor": True},
-            "default": {"admin": True, "viewer": False, "editor": True},
-            "developer": {"admin": True, "viewer": False, "editor": True},
-        }})
+    @auth.decorators.check_api(["configuration.artifacts.artifacts.create"])
     def post(self, bucket: str, **kwargs):
         integration_id = request.args.get('integration_id')
         c = MinioClientAdmin(integration_id)
