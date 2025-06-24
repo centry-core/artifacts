@@ -28,7 +28,17 @@ class ProjectAPI(api_tools.APIModeHandler):
     @auth.decorators.check_api(["configuration.artifacts.artifacts.view"])
     def get(self, project_id: int):
         project = self.module.context.rpc_manager.call.project_get_or_404(project_id=project_id)
-        integration_id = request.args.get('integration_id')
+        integration_uid = request.args.get('integration_uid')
+        integration = self.module.context.rpc_manager.call.integrations_get_by_uid(
+            project_id=project_id, integration_uid=integration_uid
+        )
+        if not integration:
+            return {
+                "message": "Invalid integration_uid"
+            }, 400
+        else:
+            integration_id = integration.id
+
         is_local = request.args.get('is_local', '').lower() == 'true'
         c = MinioClient(project, integration_id, is_local)
         buckets = c.list_bucket()
