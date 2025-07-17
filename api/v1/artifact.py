@@ -1,3 +1,5 @@
+import urllib.parse
+
 from flask import send_file, request
 from io import BytesIO
 from hurry.filesize import size
@@ -24,12 +26,14 @@ class ProjectAPI(api_tools.APIModeHandler):
             return send_file(BytesIO(file), download_name=filename, as_attachment=False)
 
     @auth.decorators.check_api(["configuration.artifacts.artifacts.delete"])
-    def delete(self, project_id: int, bucket: str, filename: str):
+    def delete(self, project_id: int, bucket: str):
+        filename: str = request.args.get('filename')
+        decoded_filename: str = urllib.parse.unquote(filename)
         project = self.module.context.rpc_manager.call.project_get_or_404(project_id=project_id)
         integration_id = request.args.get('integration_id')
         is_local = request.args.get('is_local', '').lower() == 'true'
         c = MinioClient(project, integration_id, is_local)
-        c.remove_file(bucket, filename)
+        c.remove_file(bucket, decoded_filename)
         return {"message": "Deleted", "size": size(c.get_bucket_size(bucket))}, 200
 
 
@@ -45,14 +49,16 @@ class AdminAPI(api_tools.APIModeHandler):
 
     @auth.decorators.check_api(["configuration.artifacts.artifacts.delete"])
     def delete(self, bucket: str, filename: str, **kwargs):
+        decoded_filename: str = urllib.parse.unquote(filename)
         integration_id = request.args.get('integration_id')
         c = MinioClientAdmin(integration_id)
-        c.remove_file(bucket, filename)
+        c.remove_file(bucket, decoded_filename)
         return {"message": "Deleted", "size": size(c.get_bucket_size(bucket))}, 200
 
 
 class API(api_tools.APIBase):
     url_params = [
+        '<string:mode>/<string:project_id>/<string:bucket>',
         '<string:project_id>/<string:bucket>/<string:filename>',
         '<string:mode>/<string:project_id>/<string:bucket>/<string:filename>',
     ]
