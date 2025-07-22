@@ -81,6 +81,11 @@ class ProjectAPI(api_tools.APIModeHandler):
 
         project = self.module.context.rpc_manager.call.project_get_or_404(project_id=project_id)
         minio_client = MinioClient(project, integration_id, is_local)
+
+        bucket_names = minio_client.list_bucket()
+        if bucket in bucket_names:
+            return {"message": f"Bucket with name {bucket} already exists"}, 400
+
         days = calculate_retention_days(project, expiration_value, expiration_measure)
         response = minio_client.create_bucket(bucket=bucket, bucket_type='local')
         if isinstance(response, dict) and response['Location'] and days:
