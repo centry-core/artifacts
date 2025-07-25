@@ -90,6 +90,7 @@ class Module(module.ModuleModel):
                         project_id=public_project_id,
                         type='s3',
                         title='Elitea S3 storage',
+                        shared=True,
                         data={
                             'access_key': config.MINIO_ACCESS_KEY,
                             'secret_access_key': config.MINIO_SECRET_KEY,
