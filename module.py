@@ -89,7 +89,8 @@ class Module(module.ModuleModel):
                     config, was_created = self.context.rpc_manager.timeout(2).configurations_create_if_not_exists(dict(
                         project_id=public_project_id,
                         type='s3',
-                        title='Elitea S3 storage',
+                        alita_title='elitea_s3_storage',
+                        label='Elitea S3 storage',
                         shared=True,
                         data={
                             'access_key': config.MINIO_ACCESS_KEY,
