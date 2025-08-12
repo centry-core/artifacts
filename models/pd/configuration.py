@@ -1,10 +1,20 @@
 from typing import Optional
 
-from pydantic import BaseModel, SecretStr
+from pydantic import BaseModel, SecretStr, ConfigDict
 import boto3
 
 
 class S3Config(BaseModel):
+    model_config = ConfigDict(
+        json_schema_extra={
+            "metadata": {
+                "label": "S3 Storage",
+                "section": "storage",
+                "type": "s3",
+            }
+        }
+    )
+
     access_key: Optional[str] = None
     secret_access_key: Optional[SecretStr] = None
     region_name: str
