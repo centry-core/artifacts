@@ -10,6 +10,7 @@ class S3Config(BaseModel):
             "metadata": {
                 "label": "S3 Storage",
                 "section": "storage",
+                "icon_url": "s3storage.svg",
                 "type": "s3",
             }
         }
