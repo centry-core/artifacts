@@ -58,7 +58,7 @@ class ProjectAPI(api_tools.APIModeHandler):
         # regular expression to validate bucket name
         # ^[a-zA-Z] ensures the name starts with a letter
         # [a-zA-Z0-9-]* ensures the rest of the name contains only letters, numbers, and hyphens
-        bucket_pattern = r"^[a-zA-Z][a-zA-Z0-9-]*$"
+        bucket_pattern = r"^[a-z][a-z0-9-]*$"
 
         if not re.match(bucket_pattern, bucket):
             return {
