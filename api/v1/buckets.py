@@ -46,6 +46,7 @@ class ProjectAPI(api_tools.APIModeHandler):
                              id=mc.format_bucket_name(bucket)
                              ),
                         )
+        rows.sort(key=lambda x: x['name'])
         return {"total": len(buckets), "rows": rows}, 200
 
     @auth.decorators.check_api(["configuration.artifacts.artifacts.create"])
