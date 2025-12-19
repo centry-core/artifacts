@@ -64,6 +64,7 @@ class Route:  # pylint: disable=E1101,R0903
         "/s3/<string:bucket>",
         methods=["GET", "PUT", "DELETE", "HEAD"],
         endpoint="s3_bucket_operations",
+        strict_slashes=False,
     )
     def s3_bucket_operations(self, bucket: str):
         """Bucket operations (GET/PUT/DELETE/HEAD /{bucket})"""
@@ -109,6 +110,7 @@ class Route:  # pylint: disable=E1101,R0903
         "/s3/<string:bucket>/<path:key>",
         methods=["GET", "PUT", "DELETE", "HEAD", "POST"],
         endpoint="s3_object_operations",
+        strict_slashes=False,
     )
     def s3_object_operations(self, bucket: str, key: str):
         """Object operations (GET/PUT/DELETE/HEAD/POST /{bucket}/{key})"""

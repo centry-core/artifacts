@@ -31,8 +31,17 @@ def _create_root(tag: str) -> Element:
 
 
 def _format_datetime(dt: datetime) -> str:
-    """Format datetime in S3 format (ISO 8601)"""
+    """Format datetime in S3 format (RFC-3339 / ISO 8601 with Z suffix)"""
     if isinstance(dt, str):
+        # Ensure string dates have proper format with Z suffix
+        # Input might be ISO format from filesystem: '2025-12-19T19:35:59.123456'
+        # AWS SDK requires RFC-3339 format: '2025-12-19T19:35:59.000Z'
+        if 'Z' not in dt and '+' not in dt:
+            # Strip microseconds if present and add Z suffix
+            if '.' in dt:
+                dt = dt.split('.')[0] + '.000Z'
+            else:
+                dt = dt + '.000Z'
         return dt
     return dt.strftime('%Y-%m-%dT%H:%M:%S.000Z')
 
