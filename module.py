@@ -17,9 +17,11 @@ from queue import Empty
 
 from pylon.core.tools import log  # pylint: disable=E0611,E0401
 from pylon.core.tools import module  # pylint: disable=E0611,E0401
+from pylon.core.tools import web  # pylint: disable=E0611,E0401
 from tools import theme
 
 from .models.pd.configuration import configuration_record
+from .models.pd.s3_credentials import s3_api_credentials_configuration_record
 
 
 class Module(module.ModuleModel):
@@ -32,6 +34,9 @@ class Module(module.ModuleModel):
     def init(self):
         """ Init module """
         log.info("Initializing module Artifacts")
+
+        # Initialize all components using Elitea's auto-registration
+        # This includes: api/, slots/, events/, rpc/, routes/, methods/, inits/
         self.descriptor.init_all()
 
         theme.register_subsection(
@@ -70,6 +75,7 @@ class Module(module.ModuleModel):
     def deinit(self):  # pylint: disable=R0201
         """ De-init module """
         log.info("De-initializing module Artifacts")
+        # S3 public rule cleanup is handled in methods/s3.py via @web.deinit()
 
     def ready(self):
         log.info("Artifacts ready callback")
@@ -77,9 +83,14 @@ class Module(module.ModuleModel):
 
         from .models.pd.configuration import S3Config
         try:
-            # type_name: str, section: str, model: type[BaseModel] = None, validation_func: str = None
+            # Register S3 storage configuration type
             self.context.rpc_manager.timeout(2).configurations_register(
                **configuration_record
+            )
+
+            # Register S3 API credentials configuration type
+            self.context.rpc_manager.timeout(2).configurations_register(
+               **s3_api_credentials_configuration_record
             )
 
             secrets = VaultClient().get_all_secrets()
