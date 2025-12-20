@@ -2,8 +2,10 @@ from flask import request
 
 from hurry.filesize import size
 
-from tools import MinioClient, api_tools, auth
+from tools import MinioClient, api_tools, auth, db
 from pylon.core.tools import log
+from ...models.artifact import Artifact
+from ...utils.utils import create_artifact_entry, delete_artifact_entries
 
 
 def calculate_readable_retention_policy(days: int) -> dict:
@@ -63,15 +65,40 @@ class ProjectAPI(api_tools.APIModeHandler):
             mc = MinioClient(project, configuration_title=configuration_title)
         except AttributeError:
             return {'error': f'Error accessing s3: {configuration_title}'}, 400
-        if "file" in request.files:
-            api_tools.upload_file_base(
-                bucket=bucket,
-                data=request.files["file"].read(),
-                file_name=request.files["file"].filename,
-                client=mc,
-                create_if_not_exists=request.args.get('create_if_not_exists', True)
-            )
-        return {"message": "Done", "size": size(mc.get_bucket_size(bucket))}, 200
+
+        if "file" not in request.files:
+            return {'error': 'No file provided'}, 400
+
+        file = request.files["file"]
+        filename = file.filename
+
+        # Upload file to S3
+        api_tools.upload_file_base(
+            bucket=bucket,
+            data=file.read(),
+            file_name=filename,
+            client=mc,
+            create_if_not_exists=request.args.get('create_if_not_exists', True)
+        )
+
+        artifact_id = create_artifact_entry(
+            project_id=project_id,
+            bucket=bucket,
+            filename=filename,
+            source=request.form.get('source', 'manual'),
+            prompt=request.form.get('prompt')
+        )
+
+        response = {
+            "message": "Done",
+            "ok": True,
+            "bucket": bucket,
+            "filename": filename,
+            "size": size(mc.get_bucket_size(bucket)),
+            "artifact_id": artifact_id
+        }
+
+        return response, 200
 
     @auth.decorators.check_api({
         "permissions": ["configuration.artifacts.artifacts.delete"],
@@ -81,6 +108,14 @@ class ProjectAPI(api_tools.APIModeHandler):
             "developer": {"admin": True, "viewer": False, "editor": True},
         }})
     def delete(self, project_id: int, bucket: str):
+        """
+        Delete file(s) from bucket with artifact table cleanup.
+        
+        Query params:
+        - fname[]: filename(s) to delete (existing behavior)
+        
+        NEW: Also cleans up artifacts table entries for deleted files.
+        """
         args = request.args
         project = self.module.context.rpc_manager.call.project_get_or_404(project_id=project_id)
         configuration_title = args.get('configuration_title')
@@ -88,11 +123,22 @@ class ProjectAPI(api_tools.APIModeHandler):
             mc = MinioClient(project, configuration_title=configuration_title)
         except AttributeError:
             return {'error': f'Error accessing s3: {configuration_title}'}, 400
+        
+        # Delete from S3
         if not args.get("fname[]"):
             mc.remove_bucket(bucket)
+            # Clean up all artifacts for this bucket
+            delete_artifact_entries(project_id, bucket)
         else:
-            for fname in args.getlist("fname[]"):
+            filenames = args.getlist("fname[]")
+            
+            # Delete files from S3
+            for fname in filenames:
                 mc.remove_file(bucket, fname)
+            
+            # Clean up artifacts table entries
+            delete_artifact_entries(project_id, bucket, filenames)
+        
         return {"message": "Deleted", "size": size(mc.get_bucket_size(bucket))}, 200
 
 
