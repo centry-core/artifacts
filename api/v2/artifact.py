@@ -7,7 +7,7 @@ from pylon.core.tools import log
 from botocore.exceptions import ClientError
 
 from tools import MinioClient, api_tools, auth
-from ...utils.utils import delete_artifact_entries
+from ...utils.utils import delete_artifact_entries, check_artifacts_in_use
 
 
 class ProjectAPI(api_tools.APIModeHandler):
@@ -33,12 +33,26 @@ class ProjectAPI(api_tools.APIModeHandler):
     def delete(self, project_id: int, bucket: str):
         filename: str = request.args.get('filename')
         decoded_filename: str = urllib.parse.unquote(filename)
+        check_refs = request.args.get('check_refs', 'true').lower() == 'true'
+        
         project = self.module.context.rpc_manager.call.project_get_or_404(project_id=project_id)
         configuration_title = request.args.get('configuration_title')
         try:
             mc = MinioClient(project, configuration_title=configuration_title)
         except AttributeError:
             return {'error': f'Error accessing s3: {configuration_title}'}, 400
+        
+        # Check if artifact is still referenced (if check_refs=true)
+        if check_refs:
+            referenced = check_artifacts_in_use(project_id, bucket, [decoded_filename])
+            if referenced:
+                artifact_ids = list(set([ref['artifact_id'] for ref in referenced]))
+                return {
+                    'error': 'Cannot delete: artifact still referenced in messages',
+                    'referenced_artifacts': artifact_ids,
+                    'reference_count': len(referenced),
+                    'hint': 'Use check_refs=false to force delete'
+                }, 409
         
         # Delete from S3
         mc.remove_file(bucket, decoded_filename)

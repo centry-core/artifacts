@@ -44,7 +44,7 @@ class ProjectAPI(api_tools.APIModeHandler):
                 except Exception as e:
                     log.warning(f"Failed to get file from bucket for artifact {artifact_id}: {e}")
 
-        # Attempt 2: Fallback to old messages (backward compatibility)
+        # Attempt 2: Fallback to message base64 (if bucket deleted but message still has content)
         try:
             result = self.module.context.rpc_manager.timeout(3).elitea_core_get_content_from_message_by_artifact_id(
                 artifact_id=artifact_id
@@ -56,7 +56,7 @@ class ProjectAPI(api_tools.APIModeHandler):
                 except TypeError:  # new flask
                     return send_file(BytesIO(file_content), download_name=filename, as_attachment=False)
         except Exception as e:
-            log.warning(f"Attempt 2 (elitea_core RPC) failed: {e}")
+            log.warning(f"Attempt 2 (message fallback) failed: {e}")
 
         raise NotFound(f"Artifact {artifact_id} not found")
 

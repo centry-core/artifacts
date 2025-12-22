@@ -56,33 +56,3 @@ class RPC:
         except Exception as e:
             log.error(f"Error getting artifact {artifact_id}: {e}")
             return None
-
-    @web.rpc('artifacts_get_artifact_content', 'get_artifact_content')
-    def get_artifact_content(self, artifact_id: str, project_id: int) -> Optional[bytes]:
-        """
-        Get artifact file content by UUID (for base64 reconstruction).
-        
-        NOTE: Do not use across different pylons.
-
-        Args:
-            artifact_id: UUID string
-            project_id: Project ID for database session and MinIO client
-
-        Returns:
-            bytes: File content or None if not found
-        """
-
-        try:
-            with db.get_session(project_id) as session:
-                artifact = session.query(Artifact).filter_by(artifact_id=artifact_id).first()
-
-                if artifact:
-                    project = self.context.rpc_manager.call.project_get_or_404(project_id=project_id)
-                    mc = MinioClient(project)
-                    file_content = mc.get_file(artifact.bucket, artifact.filename)
-                    return file_content
-
-            return None
-        except Exception as e:
-            log.error(f"Error getting artifact file {artifact_id}: {e}")
-            return None
