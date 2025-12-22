@@ -21,7 +21,6 @@ from werkzeug.exceptions import NotFound
 from tools import MinioClient, api_tools, auth, db, config as c
 from pylon.core.tools import log, web
 from ...models.artifact import Artifact
-from ...utils.utils import extract_from_message
 
 
 class ProjectAPI(api_tools.APIModeHandler):
@@ -46,13 +45,18 @@ class ProjectAPI(api_tools.APIModeHandler):
                     log.warning(f"Failed to get file from bucket for artifact {artifact_id}: {e}")
 
         # Attempt 2: Fallback to old messages (backward compatibility)
-        result = extract_from_message(artifact_id)
-        if result:
-            file_content, filename = result
-            try:
-                return send_file(BytesIO(file_content), attachment_filename=filename)
-            except TypeError:  # new flask
-                return send_file(BytesIO(file_content), download_name=filename, as_attachment=False)
+        try:
+            result = self.module.context.rpc_manager.timeout(3).elitea_core_get_content_from_message_by_artifact_id(
+                artifact_id=artifact_id
+            )
+            if result:
+                file_content, filename = result
+                try:
+                    return send_file(BytesIO(file_content), attachment_filename=filename)
+                except TypeError:  # new flask
+                    return send_file(BytesIO(file_content), download_name=filename, as_attachment=False)
+        except Exception as e:
+            log.warning(f"Attempt 2 (elitea_core RPC) failed: {e}")
 
         raise NotFound(f"Artifact {artifact_id} not found")
 

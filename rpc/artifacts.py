@@ -61,6 +61,8 @@ class RPC:
     def get_artifact_content(self, artifact_id: str, project_id: int) -> Optional[bytes]:
         """
         Get artifact file content by UUID (for base64 reconstruction).
+        
+        NOTE: Do not use across different pylons.
 
         Args:
             artifact_id: UUID string
