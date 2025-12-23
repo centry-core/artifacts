@@ -23,6 +23,7 @@ from tools import auth, context, db
 
 from ..models.enums.all import FileType
 from ..models.artifact import Artifact
+from ..models.pd.artifact import ArtifactDetail
 
 
 def determine_artifact_type(filename: str) -> str:
@@ -62,9 +63,10 @@ def create_artifact_entry(
     filename: str,
     source: str = "manual",
     prompt: Optional[str] = None
-) -> Optional[str]:
+) -> Optional[ArtifactDetail]:
     """
-    Create artifact entry in database.
+    Create artifact entry in database. If artifact already exists for bucket+filename,
+    returns existing artifact details (idempotent behavior).
 
     Args:
         project_id: Project ID for database session
@@ -74,25 +76,37 @@ def create_artifact_entry(
         prompt: Optional prompt text for generated artifacts
 
     Returns:
-        artifact_id (UUID string) or None if creation failed
+        ArtifactDetail model with artifact data or None if creation failed
     """
     try:
-        artifact = Artifact(
-            bucket=bucket,
-            filename=filename,
-            file_type=determine_artifact_type(filename),
-            source=source,
-            author_id=auth.current_user().get("id"),
-            prompt=prompt
-        )
-
         with db.get_session(project_id) as session:
-            session.add(artifact)
-            session.commit()
-            artifact_id = str(artifact.artifact_id)
+            # Check if artifact already exists
+            existing_artifact = session.query(Artifact).filter(
+                Artifact.bucket == bucket,
+                Artifact.filename == filename
+            ).first()
 
-        log.info(f"Created artifact {artifact_id} for {bucket}/{filename}")
-        return artifact_id
+            if existing_artifact:
+                log.debug(f"Artifact already exists: {existing_artifact.artifact_id} for {bucket}/{filename}")
+                artifact = existing_artifact
+            else:
+                # Create new artifact
+                artifact = Artifact(
+                    bucket=bucket,
+                    filename=filename,
+                    file_type=determine_artifact_type(filename),
+                    source=source,
+                    author_id=auth.current_user().get("id"),
+                    prompt=prompt
+                )
+                session.add(artifact)
+                session.commit()
+                session.refresh(artifact)  # Ensure artifact_id is populated
+                log.info(f"Created artifact {artifact.artifact_id} for {bucket}/{filename}")
+
+            result = ArtifactDetail.model_validate(artifact)
+
+        return result
 
     except Exception as e:
         log.error(f"Failed to create artifact entry: {e}")
