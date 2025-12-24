@@ -34,7 +34,7 @@ class ProjectAPI(api_tools.APIModeHandler):
             if artifact:
                 try:
                     mc = MinioClient(project)
-                    file_content = mc.get_file(artifact.bucket, artifact.filename)
+                    file_content = mc.download_file(artifact.bucket, artifact.filename)
 
                     if file_content:
                         try:
