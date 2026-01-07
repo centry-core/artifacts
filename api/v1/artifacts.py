@@ -73,7 +73,9 @@ class ProjectAPI(api_tools.APIModeHandler):
                 client=mc,
                 create_if_not_exists=request.args.get('create_if_not_exists', True)
             )
-        file_size = mc.get_file_size(bucket, file_name) if file_name else 0
+        if not file_name:
+            return {'error': 'No file provided'}, 400
+        file_size = mc.get_file_size(bucket, file_name)
         return {"message": "Done", "size": size(file_size)}, 200
 
     @auth.decorators.check_api({
