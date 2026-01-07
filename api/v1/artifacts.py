@@ -63,15 +63,20 @@ class ProjectAPI(api_tools.APIModeHandler):
             mc = MinioClient(project, configuration_title=configuration_title)
         except AttributeError:
             return {'error': f'Error accessing s3: {configuration_title}'}, 400
+        file_name = None
         if "file" in request.files:
+            file_name = request.files["file"].filename
             api_tools.upload_file_base(
                 bucket=bucket,
                 data=request.files["file"].read(),
-                file_name=request.files["file"].filename,
+                file_name=file_name,
                 client=mc,
                 create_if_not_exists=request.args.get('create_if_not_exists', True)
             )
-        return {"message": "Done", "size": size(mc.get_bucket_size(bucket))}, 200
+        if not file_name:
+            return {'error': 'No file provided'}, 400
+        file_size = mc.get_file_size(bucket, file_name)
+        return {"message": "Done", "size": size(file_size)}, 200
 
     @auth.decorators.check_api({
         "permissions": ["configuration.artifacts.artifacts.delete"],
