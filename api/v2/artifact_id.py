@@ -47,6 +47,7 @@ class ProjectAPI(api_tools.APIModeHandler):
         # Attempt 2: Fallback to message base64 (if bucket deleted but message still has content)
         try:
             result = self.module.context.rpc_manager.timeout(3).elitea_core_get_content_from_message_by_artifact_id(
+                project_id=project_id,
                 artifact_id=artifact_id
             )
             if result:

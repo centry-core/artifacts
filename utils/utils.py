@@ -156,44 +156,4 @@ def delete_artifact_entries(
         return 0
 
 
-def check_artifacts_in_use(
-    project_id: int,
-    bucket: str,
-    filenames: Optional[list] = None
-) -> list:
-    """
-    Check if artifacts are referenced in messages.
-    
-    Args:
-        project_id: Project ID for database session
-        bucket: Bucket name
-        filenames: Optional list of filenames to check. If None, checks all artifacts in bucket.
-        
-    Returns:
-        List of dicts with artifact_id, message_id, conversation_id, project_id, created_at
-        Empty list if no references found
-    """
-    try:
-        # Get artifact_ids for the files
-        with db.get_session(project_id) as session:
-            query = session.query(Artifact).filter_by(bucket=bucket)
-            
-            if filenames:
-                query = query.filter(Artifact.filename.in_(filenames))
-            
-            artifacts = query.all()
-            artifact_ids = [str(a.artifact_id) for a in artifacts]
-        
-        if not artifact_ids:
-            return []
-        
-        # Check references via RPC to elitea_core
-        referenced = context.rpc_manager.timeout(5).elitea_core_check_artifacts_referenced(
-            artifact_ids=artifact_ids
-        )
-        
-        return referenced
-        
-    except Exception as e:
-        log.error(f"Failed to check artifact references: {e}")
-        return []
+

@@ -8,7 +8,6 @@ from ...models.artifact import Artifact
 from ...utils.utils import (
     create_artifact_entry,
     delete_artifact_entries,
-    check_artifacts_in_use
 )
 
 
@@ -139,33 +138,18 @@ class ProjectAPI(api_tools.APIModeHandler):
         - check_refs: if 'true' (default), check if artifacts are referenced in messages
         
         NEW: Also cleans up artifacts table entries for deleted files.
-        NEW: Prevents deletion if artifacts are still referenced (check_refs=true).
         """
         args = request.args
         project = self.module.context.rpc_manager.call.project_get_or_404(project_id=project_id)
         configuration_title = args.get('configuration_title')
-        check_refs = args.get('check_refs', 'true').lower() == 'true'
         
         try:
             mc = MinioClient(project, configuration_title=configuration_title)
         except AttributeError:
             return {'error': f'Error accessing s3: {configuration_title}'}, 400
         
-        # Get filenames to check
+        # Get filenames to delete
         filenames = args.getlist("fname[]")
-        
-        # Check if artifacts are still referenced (if check_refs=true)
-        if check_refs:
-            referenced = check_artifacts_in_use(project_id, bucket, filenames if filenames else None)
-            if referenced:
-                # Build error message with details
-                artifact_ids = list(set([ref['artifact_id'] for ref in referenced]))
-                return {
-                    'error': 'Cannot delete: artifacts still referenced in messages',
-                    'referenced_artifacts': artifact_ids[:10],  # Limit to 10 for response size
-                    'reference_count': len(referenced),
-                    'hint': 'Use check_refs=false to force delete'
-                }, 409
         
         # Delete from S3
         if not filenames:
