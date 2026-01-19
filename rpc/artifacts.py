@@ -200,12 +200,15 @@ class RPC:
             if not artifact_details:
                 raise RuntimeError(f"Failed to create artifact entry for {bucket}/{filename}")
 
+            # Get uploaded file size in bytes (not bucket size)
+            file_size_bytes = mc.get_file_size(bucket, filename) if filename else 0
+
             return {
                 "artifact_id": artifact_details.artifact_id,
                 "bucket": artifact_details.bucket,
                 "filename": artifact_details.filename,
                 "file_type": artifact_details.file_type,
-                "size": size(mc.get_bucket_size(bucket)),
+                "size": size(file_size_bytes),  # Convert bytes to human-readable format
                 "was_duplicate": was_duplicate
             }
         except Exception as e:
