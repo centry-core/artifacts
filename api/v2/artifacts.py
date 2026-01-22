@@ -101,12 +101,14 @@ class ProjectAPI(api_tools.APIModeHandler):
                 source=request.form.get('source', 'manual'),
                 prompt=request.form.get('prompt'),
                 configuration_title=configuration_title,
-                create_if_not_exists=request.args.get('create_if_not_exists', True)
+                create_if_not_exists=request.args.get('create_if_not_exists', True),
+                overwrite=request.args.get('overwrite', 'true').lower() == 'true'
             )
             
-            # Build response
+            # Build response with appropriate message
+            message = "Overwritten" if result.get("was_duplicate") else "Done"
             response = {
-                "message": "Done",
+                "message": message,
                 "ok": True,
                 "bucket": result["bucket"],
                 "filename": result["filename"],
