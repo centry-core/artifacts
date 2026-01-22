@@ -59,6 +59,8 @@ class ProjectAPI(api_tools.APIModeHandler):
     def post(self, project_id: int, bucket: str):
         project = self.module.context.rpc_manager.call.project_get_or_404(project_id=project_id)
         configuration_title = request.args.get('configuration_title')
+        overwrite_attachments = bool(request.form.get("overwrite_attachments", 0, type=int))
+        
         try:
             mc = MinioClient(project, configuration_title=configuration_title)
         except AttributeError:
@@ -71,7 +73,8 @@ class ProjectAPI(api_tools.APIModeHandler):
                 data=request.files["file"].read(),
                 file_name=file_name,
                 client=mc,
-                create_if_not_exists=request.args.get('create_if_not_exists', True)
+                create_if_not_exists=request.args.get('create_if_not_exists', True),
+                overwrite_attachments=overwrite_attachments,
             )
         if not file_name:
             return {'error': 'No file provided'}, 400
