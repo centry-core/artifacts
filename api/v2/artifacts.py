@@ -127,18 +127,8 @@ class ProjectAPI(api_tools.APIModeHandler):
                         "folder_id": artifact_data.get('folder_id'),
                         "type": "file"
                     }
-                else:
-                    # File in DB but not in S3 (orphaned) - still show it
-                    file_item = {
-                        "name": filename,
-                        "size": "0 B",  # Unknown size
-                        "modified": None,
-                        "artifact_id": artifact_data.get('artifact_id'),
-                        "folder_id": artifact_data.get('folder_id'),
-                        "type": "file",
-                        "orphaned": True  # Flag for missing S3 file
-                    }
-                filtered_files.append(file_item)
+               
+                    filtered_files.append(file_item)
             
             # Combine folders and files
             all_items = folder_items + filtered_files
