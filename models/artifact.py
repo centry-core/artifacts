@@ -16,9 +16,10 @@
 
 import uuid
 from datetime import datetime
+from typing import Optional
 
-from sqlalchemy import UUID, Integer, String, Text, DateTime, func, UniqueConstraint
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy import UUID, Integer, String, Text, DateTime, func, UniqueConstraint, ForeignKey, Index
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from tools import db
 from tools import config as c
@@ -29,10 +30,12 @@ class Artifact(db.Base):
     Artifact metadata table for tracking uploaded/generated files.
 
     Maps artifact UUIDs to bucket+filename locations.
+    Artifacts can optionally belong to a folder within a bucket.
     """
     __tablename__ = 'artifacts'
     __table_args__ = (
         UniqueConstraint('bucket', 'filename', name='uq_artifacts_bucket_filename'),
+        Index('ix_artifacts_bucket_folder', 'bucket', 'folder_id'),
         {'schema': c.POSTGRES_TENANT_SCHEMA},
     )
 
@@ -44,5 +47,13 @@ class Artifact(db.Base):
     source: Mapped[str] = mapped_column(String, nullable=False)
     author_id: Mapped[int] = mapped_column(Integer, nullable=True)
     prompt: Mapped[str] = mapped_column(Text, nullable=True)
+    folder_id: Mapped[Optional[int]] = mapped_column(
+        Integer,
+        ForeignKey(f'{c.POSTGRES_TENANT_SCHEMA}.artifact_folders.id', ondelete='SET NULL'),
+        nullable=True
+    )
     created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime, nullable=True, onupdate=func.now())
+    
+    # Relationship to folder
+    folder = relationship("ArtifactFolder", backref="artifacts", lazy="joined")

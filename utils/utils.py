@@ -62,7 +62,8 @@ def create_artifact_entry(
     bucket: str,
     filename: str,
     source: str = "manual",
-    prompt: Optional[str] = None
+    prompt: Optional[str] = None,
+    folder_id: Optional[int] = None
 ) -> Optional[ArtifactDetail]:
     """
     Create artifact entry in database. If artifact already exists for bucket+filename,
@@ -74,6 +75,7 @@ def create_artifact_entry(
         filename: File name
         source: Source type ("generated" | "attached" | "manual")
         prompt: Optional prompt text for generated artifacts
+        folder_id: Optional folder ID to place artifact in
 
     Returns:
         ArtifactDetail model with artifact data or None if creation failed
@@ -88,6 +90,11 @@ def create_artifact_entry(
 
             if existing_artifact:
                 log.debug(f"Artifact already exists: {existing_artifact.artifact_id} for {bucket}/{filename}")
+                # Update folder_id if different
+                if folder_id is not None and existing_artifact.folder_id != folder_id:
+                    existing_artifact.folder_id = folder_id
+                    session.commit()
+                    session.refresh(existing_artifact)
                 artifact = existing_artifact
             else:
                 # Create new artifact
@@ -97,7 +104,8 @@ def create_artifact_entry(
                     file_type=determine_artifact_type(filename),
                     source=source,
                     author_id=auth.current_user().get("id"),
-                    prompt=prompt
+                    prompt=prompt,
+                    folder_id=folder_id
                 )
                 session.add(artifact)
                 session.commit()

@@ -9,6 +9,7 @@ from flask import request
 
 from pylon.core.tools import log
 from tools import MinioClient, api_tools, auth
+from ...utils.folder_utils import delete_folders_by_bucket
 
 
 def calculate_retention_days(project, expiration_value, expiration_measure):
@@ -127,12 +128,23 @@ class ProjectAPI(api_tools.APIModeHandler):
     @auth.decorators.check_api(["configuration.artifacts.artifacts.delete"])
     def delete(self, project_id: int):
         configuration_title = request.args.get('configuration_title')
+        bucket_name = request.args.get("name")
+        
+        if not bucket_name:
+            return {"error": "Bucket name is required"}, 400
+        
         project = self.module.context.rpc_manager.call.project_get_or_404(project_id=project_id)
         try:
             mc = MinioClient(project, configuration_title=configuration_title)
         except AttributeError:
             return {'error': f'Error accessing s3: {configuration_title}'}, 400
-        mc.remove_bucket(request.args["name"])
+        
+        # Remove bucket from S3
+        mc.remove_bucket(bucket_name)
+        
+        # Clean up folders associated with this bucket
+        delete_folders_by_bucket(project_id, bucket_name)
+        
         return {"message": "Deleted"}, 200
 
 
