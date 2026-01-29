@@ -31,6 +31,7 @@ class ArtifactDetail(BaseModel):
     source: str
     author_id: Optional[int] = None
     prompt: Optional[str] = None
+    folder_id: Optional[int] = None
 
     @field_validator('artifact_id', mode='before')
     @classmethod

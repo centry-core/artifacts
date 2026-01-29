@@ -115,6 +115,7 @@ class RPC:
         file_data: bytes,
         source: str = "manual",
         prompt: Optional[str] = None,
+        folder_id: Optional[int] = None,
         configuration_title: Optional[str] = None,
         create_if_not_exists: bool = True,
         bucket_retention_days: Optional[int] = None,
@@ -137,6 +138,7 @@ class RPC:
             file_data: File content bytes
             source: Source type (manual, attached, generated)
             prompt: Optional user prompt context
+            folder_id: Optional folder ID to place artifact in
             configuration_title: Optional S3 configuration title
             create_if_not_exists: Create bucket if it doesn't exist
             bucket_retention_days: Retention policy for bucket (if creating)
@@ -144,7 +146,7 @@ class RPC:
             overwrite: Allow overwriting existing files
 
         Returns:
-            dict with artifact_id, bucket, filename, file_type, size, was_duplicate
+            dict with artifact_id, bucket, filename, file_type, size, was_duplicate, folder_id
 
         Raises:
             RuntimeError: If duplicate file exists and overwrite=False
@@ -194,7 +196,8 @@ class RPC:
                 bucket=bucket,
                 filename=filename,
                 source=source,
-                prompt=prompt
+                prompt=prompt,
+                folder_id=folder_id
             )
 
             if not artifact_details:
@@ -209,7 +212,8 @@ class RPC:
                 "filename": artifact_details.filename,
                 "file_type": artifact_details.file_type,
                 "size": size(file_size_bytes),  # Convert bytes to human-readable format
-                "was_duplicate": was_duplicate
+                "was_duplicate": was_duplicate,
+                "folder_id": artifact_details.folder_id
             }
         except Exception as e:
             log.error(f"Failed to upload and register artifact: {e}")
