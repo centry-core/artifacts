@@ -94,15 +94,6 @@ class ProjectAPI(api_tools.APIModeHandler):
                     for artifact in artifacts
                 }
                 
-                # Get folder names for display
-                folder_ids = set(a.folder_id for a in artifacts if a.folder_id)
-                folder_names = {}
-                if folder_ids:
-                    parent_folders = session.query(ArtifactFolder.id, ArtifactFolder.name).filter(
-                        ArtifactFolder.id.in_(folder_ids)
-                    ).all()
-                    folder_names = {f.id: f.name for f in parent_folders}
-                
                 # Extract folder data while still in session context
                 folder_items = []
                 for folder in folders:
@@ -134,7 +125,6 @@ class ProjectAPI(api_tools.APIModeHandler):
                         "modified": s3_file.get("modified"),
                         "artifact_id": artifact_data.get('artifact_id'),
                         "folder_id": artifact_data.get('folder_id'),
-                        "folder_name": folder_names.get(artifact_data.get('folder_id')),
                         "type": "file"
                     }
                 else:
@@ -145,7 +135,6 @@ class ProjectAPI(api_tools.APIModeHandler):
                         "modified": None,
                         "artifact_id": artifact_data.get('artifact_id'),
                         "folder_id": artifact_data.get('folder_id'),
-                        "folder_name": folder_names.get(artifact_data.get('folder_id')),
                         "type": "file",
                         "orphaned": True  # Flag for missing S3 file
                     }
@@ -180,8 +169,7 @@ class ProjectAPI(api_tools.APIModeHandler):
             - file: File to upload (required)
             - source: Source type ('manual', 'generated', 'attached')
             - prompt: Optional prompt text for generated artifacts
-            - folder_name: Optional folder name to place artifact in
-            - folder_id: Optional folder ID (deprecated, use folder_name)
+            - folder_id: Optional folder ID to place artifact in
         
         Query params:
             - configuration_title: S3 configuration to use
@@ -197,21 +185,10 @@ class ProjectAPI(api_tools.APIModeHandler):
         filename = file.filename
         file_data = file.read()
         
-        # Get folder_id from form data - support both folder_name and folder_id
-        folder_name = request.form.get('folder_name')
+        # Get folder_id from form data
         folder_id = request.form.get('folder_id')
         
-        if folder_name:
-            # Look up folder by name
-            with db.get_session(project_id) as session:
-                folder = session.query(ArtifactFolder).filter(
-                    ArtifactFolder.bucket == bucket,
-                    ArtifactFolder.name == folder_name
-                ).first()
-                if not folder:
-                    return {'error': f'Folder "{folder_name}" not found in bucket {bucket}'}, 404
-                folder_id = folder.id
-        elif folder_id:
+        if folder_id:
             try:
                 folder_id = int(folder_id)
                 # Validate folder exists
@@ -318,8 +295,7 @@ class ProjectAPI(api_tools.APIModeHandler):
         
         Request body:
             - artifact_ids: List of artifact IDs to update
-            - folder_name: Target folder name (use null to move to root)
-            - folder_id: Target folder ID (deprecated, use folder_name)
+            - folder_id: Target folder ID (use null/0 to move to root)
         """
         data = request.json
         
@@ -327,34 +303,25 @@ class ProjectAPI(api_tools.APIModeHandler):
             return {"error": "Request body is required"}, 400
         
         artifact_ids = data.get('artifact_ids', [])
-        folder_name = data.get('folder_name')
         folder_id = data.get('folder_id')
         
         if not artifact_ids:
             return {"error": "artifact_ids is required"}, 400
         
-        # Support both folder_name and folder_id
-        if folder_name is not None:
-            # Look up folder by name
-            with db.get_session(project_id) as session:
-                folder = session.query(ArtifactFolder).filter(
-                    ArtifactFolder.bucket == bucket,
-                    ArtifactFolder.name == folder_name
-                ).first()
-                if not folder:
-                    return {"error": f"Folder '{folder_name}' not found in bucket {bucket}"}, 404
-                folder_id = folder.id
-        elif folder_id and folder_id != 0:
-            # Validate folder exists if specified by ID
+        # Determine target folder_id
+        target_folder_id = None
+        
+        if folder_id is not None and folder_id != 0:
+            # Validate folder exists in the target bucket
             with db.get_session(project_id) as session:
                 folder = session.query(ArtifactFolder).filter(
                     ArtifactFolder.id == folder_id,
                     ArtifactFolder.bucket == bucket
                 ).first()
                 if not folder:
-                    return {"error": f"Folder with ID {folder_id} not found in bucket {bucket}"}, 404
-        else:
-            folder_id = None  # Normalize 0 to None for root
+                    return {"error": f"Folder with ID {folder_id} not found in bucket '{bucket}'. Cannot move artifacts to a folder in a different bucket."}, 404
+                target_folder_id = folder_id
+        # else: target_folder_id remains None (move to root)
         
         try:
             with db.get_session(project_id) as session:
@@ -362,7 +329,7 @@ class ProjectAPI(api_tools.APIModeHandler):
                     Artifact.bucket == bucket,
                     Artifact.artifact_id.in_(artifact_ids)
                 ).update(
-                    {Artifact.folder_id: folder_id},
+                    {Artifact.folder_id: target_folder_id},
                     synchronize_session=False
                 )
                 session.commit()
