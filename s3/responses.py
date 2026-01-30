@@ -14,12 +14,13 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-""" S3 XML Response Builders """
+""" S3 XML/JSON Response Builders """
 
+import json
 from datetime import datetime
 from typing import List, Dict, Optional
 from xml.etree.ElementTree import Element, SubElement, tostring
-from flask import Response
+from flask import Response, request
 
 
 S3_NAMESPACE = 'http://s3.amazonaws.com/doc/2006-03-01/'
@@ -46,6 +47,11 @@ def _format_datetime(dt: datetime) -> str:
     return dt.strftime('%Y-%m-%dT%H:%M:%S.000Z')
 
 
+def _get_output_format() -> str:
+    """Get the requested output format from query parameter (xml or json)"""
+    return request.args.get('format', 'xml').lower()
+
+
 def _to_xml_response(root: Element, status_code: int = 200) -> Response:
     """Convert Element to Flask Response with proper headers"""
     xml_str = b'<?xml version="1.0" encoding="UTF-8"?>\n' + tostring(root, encoding='utf-8')
@@ -56,19 +62,54 @@ def _to_xml_response(root: Element, status_code: int = 200) -> Response:
     )
 
 
+def _to_json_response(data: Dict, status_code: int = 200) -> Response:
+    """Convert dict to Flask JSON Response"""
+    return Response(
+        json.dumps(data, indent=2),
+        status=status_code,
+        mimetype='application/json'
+    )
+
+
 def error_response(code: str, message: str, resource: str = '',
                    request_id: str = '', status_code: int = 400) -> Response:
     """
-    Generate S3 error response.
+    Generate S3 error response in XML or JSON format.
 
-    Example:
+    XML Example:
     <Error>
         <Code>NoSuchBucket</Code>
         <Message>The specified bucket does not exist</Message>
         <Resource>/mybucket</Resource>
         <RequestId>4442587FB7D0A2F9</RequestId>
     </Error>
+
+    JSON Example:
+    {
+        "error": {
+            "code": "NoSuchBucket",
+            "message": "The specified bucket does not exist",
+            "resource": "/mybucket",
+            "requestId": "4442587FB7D0A2F9"
+        }
+    }
     """
+    output_format = _get_output_format()
+
+    if output_format == 'json':
+        data = {
+            'error': {
+                'code': code,
+                'message': message
+            }
+        }
+        if resource:
+            data['error']['resource'] = resource
+        if request_id:
+            data['error']['requestId'] = request_id
+        return _to_json_response(data, status_code)
+
+    # Default to XML
     root = Element('Error')
     SubElement(root, 'Code').text = code
     SubElement(root, 'Message').text = message
@@ -83,9 +124,9 @@ def error_response(code: str, message: str, resource: str = '',
 def list_buckets_response(buckets: List[Dict], owner_id: str = '',
                           owner_display_name: str = '') -> Response:
     """
-    Generate ListBuckets response.
+    Generate ListBuckets response in XML or JSON format.
 
-    Example:
+    XML Example:
     <ListAllMyBucketsResult>
         <Owner>
             <ID>owner-id</ID>
@@ -98,7 +139,40 @@ def list_buckets_response(buckets: List[Dict], owner_id: str = '',
             </Bucket>
         </Buckets>
     </ListAllMyBucketsResult>
+
+    JSON Example:
+    {
+        "owner": {
+            "id": "owner-id",
+            "displayName": "owner-name"
+        },
+        "buckets": [
+            {
+                "name": "mybucket",
+                "creationDate": "2024-01-01T00:00:00.000Z"
+            }
+        ]
+    }
     """
+    output_format = _get_output_format()
+
+    if output_format == 'json':
+        data = {
+            'owner': {
+                'id': owner_id,
+                'displayName': owner_display_name
+            },
+            'buckets': []
+        }
+        for bucket in buckets:
+            creation_date = bucket.get('creation_date', datetime.utcnow())
+            data['buckets'].append({
+                'name': bucket['name'],
+                'creationDate': _format_datetime(creation_date)
+            })
+        return _to_json_response(data)
+
+    # Default to XML
     root = _create_root('ListAllMyBucketsResult')
 
     owner = SubElement(root, 'Owner')
@@ -123,9 +197,9 @@ def list_objects_v2_response(bucket: str, objects: List[Dict],
                              is_truncated: bool = False,
                              common_prefixes: List[str] = None) -> Response:
     """
-    Generate ListObjectsV2 response.
+    Generate ListObjectsV2 response in XML or JSON format.
 
-    Example:
+    XML Example:
     <ListBucketResult>
         <IsTruncated>false</IsTruncated>
         <Contents>
@@ -141,7 +215,59 @@ def list_objects_v2_response(bucket: str, objects: List[Dict],
         <MaxKeys>1000</MaxKeys>
         <KeyCount>1</KeyCount>
     </ListBucketResult>
+
+    JSON Example:
+    {
+        "name": "mybucket",
+        "prefix": "",
+        "delimiter": "",
+        "maxKeys": 1000,
+        "keyCount": 1,
+        "isTruncated": false,
+        "contents": [
+            {
+                "key": "my-image.jpg",
+                "lastModified": "2024-01-01T00:00:00.000Z",
+                "etag": "\"fba9dede5f27731c9771645a39863328\"",
+                "size": 434234,
+                "storageClass": "STANDARD"
+            }
+        ]
+    }
     """
+    output_format = _get_output_format()
+
+    if output_format == 'json':
+        data = {
+            'name': bucket,
+            'prefix': prefix,
+            'delimiter': delimiter,
+            'maxKeys': max_keys,
+            'keyCount': len(objects),
+            'isTruncated': is_truncated,
+            'contents': []
+        }
+
+        for obj in objects:
+            data['contents'].append({
+                'key': obj['name'],
+                'lastModified': _format_datetime(obj.get('modified', datetime.utcnow())),
+                'etag': obj.get('etag', f'"{obj["name"]}"'),
+                'size': obj.get('size', 0),
+                'storageClass': 'STANDARD'
+            })
+
+        if continuation_token:
+            data['continuationToken'] = continuation_token
+        if next_continuation_token:
+            data['nextContinuationToken'] = next_continuation_token
+
+        if common_prefixes:
+            data['commonPrefixes'] = [{'prefix': p} for p in common_prefixes]
+
+        return _to_json_response(data)
+
+    # Default to XML
     root = _create_root('ListBucketResult')
 
     SubElement(root, 'IsTruncated').text = str(is_truncated).lower()
@@ -219,15 +345,33 @@ def head_response(content_length: int = 0, content_type: str = 'application/octe
 def initiate_multipart_upload_response(bucket: str, key: str,
                                        upload_id: str) -> Response:
     """
-    Generate InitiateMultipartUpload response.
+    Generate InitiateMultipartUpload response in XML or JSON format.
 
-    Example:
+    XML Example:
     <InitiateMultipartUploadResult>
         <Bucket>mybucket</Bucket>
         <Key>mykey</Key>
         <UploadId>upload-id</UploadId>
     </InitiateMultipartUploadResult>
+
+    JSON Example:
+    {
+        "bucket": "mybucket",
+        "key": "mykey",
+        "uploadId": "upload-id"
+    }
     """
+    output_format = _get_output_format()
+
+    if output_format == 'json':
+        data = {
+            'bucket': bucket,
+            'key': key,
+            'uploadId': upload_id
+        }
+        return _to_json_response(data)
+
+    # Default to XML
     root = _create_root('InitiateMultipartUploadResult')
     SubElement(root, 'Bucket').text = bucket
     SubElement(root, 'Key').text = key
@@ -252,16 +396,36 @@ def upload_part_response(etag: str) -> Response:
 def complete_multipart_upload_response(bucket: str, key: str,
                                        location: str, etag: str) -> Response:
     """
-    Generate CompleteMultipartUpload response.
+    Generate CompleteMultipartUpload response in XML or JSON format.
 
-    Example:
+    XML Example:
     <CompleteMultipartUploadResult>
         <Location>http://example.com/bucket/key</Location>
         <Bucket>mybucket</Bucket>
         <Key>mykey</Key>
         <ETag>"etag"</ETag>
     </CompleteMultipartUploadResult>
+
+    JSON Example:
+    {
+        "location": "http://example.com/bucket/key",
+        "bucket": "mybucket",
+        "key": "mykey",
+        "etag": "\"etag\""
+    }
     """
+    output_format = _get_output_format()
+
+    if output_format == 'json':
+        data = {
+            'location': location,
+            'bucket': bucket,
+            'key': key,
+            'etag': etag
+        }
+        return _to_json_response(data)
+
+    # Default to XML
     root = _create_root('CompleteMultipartUploadResult')
     SubElement(root, 'Location').text = location
     SubElement(root, 'Bucket').text = bucket
@@ -276,9 +440,9 @@ def list_parts_response(bucket: str, key: str, upload_id: str,
                         next_part_number_marker: int = 0,
                         max_parts: int = 1000) -> Response:
     """
-    Generate ListParts response.
+    Generate ListParts response in XML or JSON format.
 
-    Example:
+    XML Example:
     <ListPartsResult>
         <Bucket>mybucket</Bucket>
         <Key>mykey</Key>
@@ -292,7 +456,50 @@ def list_parts_response(bucket: str, key: str, upload_id: str,
         </Part>
         <MaxParts>1000</MaxParts>
     </ListPartsResult>
+
+    JSON Example:
+    {
+        "bucket": "mybucket",
+        "key": "mykey",
+        "uploadId": "upload-id",
+        "isTruncated": false,
+        "maxParts": 1000,
+        "parts": [
+            {
+                "partNumber": 1,
+                "lastModified": "2024-01-01T00:00:00.000Z",
+                "etag": "\"etag\"",
+                "size": 5242880
+            }
+        ]
+    }
     """
+    output_format = _get_output_format()
+
+    if output_format == 'json':
+        data = {
+            'bucket': bucket,
+            'key': key,
+            'uploadId': upload_id,
+            'isTruncated': is_truncated,
+            'maxParts': max_parts,
+            'parts': []
+        }
+
+        for part in parts:
+            data['parts'].append({
+                'partNumber': part['part_number'],
+                'lastModified': _format_datetime(part.get('last_modified', datetime.utcnow())),
+                'etag': part['etag'],
+                'size': part['size']
+            })
+
+        if next_part_number_marker:
+            data['nextPartNumberMarker'] = next_part_number_marker
+
+        return _to_json_response(data)
+
+    # Default to XML
     root = _create_root('ListPartsResult')
     SubElement(root, 'Bucket').text = bucket
     SubElement(root, 'Key').text = key
@@ -316,14 +523,30 @@ def list_parts_response(bucket: str, key: str, upload_id: str,
 
 def copy_object_response(etag: str, last_modified: datetime) -> Response:
     """
-    Generate CopyObject response.
+    Generate CopyObject response in XML or JSON format.
 
-    Example:
+    XML Example:
     <CopyObjectResult>
         <ETag>"etag"</ETag>
         <LastModified>2024-01-01T00:00:00.000Z</LastModified>
     </CopyObjectResult>
+
+    JSON Example:
+    {
+        "etag": "\"etag\"",
+        "lastModified": "2024-01-01T00:00:00.000Z"
+    }
     """
+    output_format = _get_output_format()
+
+    if output_format == 'json':
+        data = {
+            'etag': etag,
+            'lastModified': _format_datetime(last_modified)
+        }
+        return _to_json_response(data)
+
+    # Default to XML
     root = _create_root('CopyObjectResult')
     SubElement(root, 'ETag').text = etag
     SubElement(root, 'LastModified').text = _format_datetime(last_modified)
