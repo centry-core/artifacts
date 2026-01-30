@@ -57,6 +57,7 @@ class RPC:
             'alita_title': access_key_id,  # Use access_key as unique identifier
             'label': name,
             'shared': False,  # S3 credentials are project-specific
+            'author_id': user_id,
             'data': {
                 'access_key_id': access_key_id,
                 'secret_access_key': secret_access_key,
