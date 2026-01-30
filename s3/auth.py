@@ -18,16 +18,15 @@
 
 import hmac
 import hashlib
-import re
-from datetime import datetime
 from functools import wraps
 from typing import Optional, Tuple, NamedTuple
-from urllib.parse import quote, unquote, urlparse, parse_qs
+from urllib.parse import quote
 
+import flask
 from flask import request, g
 from pylon.core.tools import log
 
-from tools import context
+from tools import context, auth
 
 
 class S3Credentials(NamedTuple):
@@ -368,16 +367,112 @@ def verify_signature(sig_components: SigV4Components,
         return False
 
 
-def authenticate_s3_request() -> Tuple[Optional[S3AuthContext], Optional[str]]:
+def authenticate_bearer_request() -> Tuple[Optional[S3AuthContext], Optional[str]]:
     """
-    Authenticate an S3 request.
+    Authenticate an S3 request using Bearer token.
 
     Returns:
         Tuple of (S3AuthContext, None) on success
         Tuple of (None, error_message) on failure
     """
-    # Try header-based auth first
+    try:
+        # Get project_id from query parameter (required for Bearer auth)
+        project_id_str = request.args.get('project_id')
+        if not project_id_str:
+            return None, "project_id query parameter required for Bearer token auth"
+
+        try:
+            project_id = int(project_id_str)
+        except ValueError:
+            return None, "Invalid project_id query parameter value"
+
+        # Use flask.g.auth which is populated by the auth middleware
+        if not hasattr(flask.g, 'auth'):
+            return None, "Authentication context not available"
+
+        auth_data = flask.g.auth
+        if auth_data.type == 'public' or auth_data.id == '-':
+            return None, "Not authenticated"
+
+        # Get user info from auth context
+        user = auth.current_user()
+        if not user or not user.get('id'):
+            return None, "Could not determine user from token"
+
+        user_id = user['id']
+        user_name = user.get('name', user.get('email', 'Bearer User'))
+
+        # Verify user has access to the project
+        rpc = context.rpc_manager
+        try:
+            has_access = rpc.timeout(5).auth_check_user_in_project(
+                user_id=user_id,
+                project_id=project_id
+            )
+            if not has_access:
+                return None, "User does not have access to this project"
+        except Exception as e:
+            log.warning("Failed to check project access: %s", e)
+
+        # Get project
+        try:
+            project = rpc.call.project_get_by_id(project_id=project_id)
+            if not project:
+                return None, "Project not found"
+        except Exception as e:
+            log.warning("Failed to get project: %s", e)
+            return None, "Project lookup failed"
+
+        # Get or create S3 credentials for this project
+        try:
+            cred_data = rpc.timeout(5).s3_credentials_get_or_create_for_bearer(
+                project_id=project_id,
+                user_id=user_id,
+                user_name=user_name
+            )
+            if not cred_data:
+                return None, "Failed to get S3 credentials for project"
+        except Exception as e:
+            log.error("Failed to get/create S3 credentials: %s", e)
+            return None, "Failed to get S3 credentials"
+
+        # Build credentials object
+        credentials = S3Credentials(
+            access_key_id=cred_data.get('access_key_id', 'bearer-auth'),
+            secret_access_key=cred_data.get('secret_access_key', ''),
+            project_id=project_id,
+            user_id=user_id,
+            name=cred_data.get('name', user_name)
+        )
+
+        return S3AuthContext(
+            credentials=credentials,
+            project=project,
+            region='us-east-1',  # Default region for Bearer auth
+            service='s3'
+        ), None
+
+    except Exception as e:
+        log.error("Bearer auth failed: %s", e)
+        return None, f"Bearer authentication failed: {str(e)}"
+
+
+def authenticate_s3_request() -> Tuple[Optional[S3AuthContext], Optional[str]]:
+    """
+    Authenticate an S3 request.
+    Supports both AWS Signature V4 and Bearer token authentication.
+
+    Returns:
+        Tuple of (S3AuthContext, None) on success
+        Tuple of (None, error_message) on failure
+    """
     auth_header = request.headers.get('Authorization', '')
+
+    # Check for Bearer token first
+    if auth_header.startswith('Bearer '):
+        return authenticate_bearer_request()
+
+    # Try AWS SigV4 header-based auth
     sig_components = parse_authorization_header(auth_header)
 
     # Try query string auth if no header
@@ -443,11 +538,12 @@ def s3_auth_required(f):
     return decorated_function
 
 
-def verify_s3_auth(flask_request) -> dict:
+def verify_bearer_auth(flask_request) -> dict:
     """
-    Verify S3 authentication for a request.
+    Verify Bearer token authentication for S3 requests.
 
-    This is a non-decorator version for use in route handlers.
+    Uses the platform's standard Bearer token authentication.
+    Requires project_id query parameter to identify the project.
 
     Args:
         flask_request: The Flask request object
@@ -457,8 +553,88 @@ def verify_s3_auth(flask_request) -> dict:
             {'credential': credential_dict} on success
             {'error': error_message} on failure
     """
-    # Try header-based auth first
+    try:
+        project_id_str = flask_request.args.get('project_id')
+        if not project_id_str:
+            return {'error': 'project_id query parameter required for Bearer token auth'}
+
+        try:
+            project_id = int(project_id_str)
+        except ValueError:
+            return {'error': 'Invalid project_id query parameter value'}
+
+        if not hasattr(flask.g, 'auth'):
+            return {'error': 'Authentication context not available'}
+
+        auth_data = flask.g.auth
+        if auth_data.type == 'public' or auth_data.id == '-':
+            return {'error': 'Not authenticated'}
+
+        user = auth.current_user()
+        if not user or not user.get('id'):
+            return {'error': 'Could not determine user from token'}
+
+        user_id = user['id']
+
+        rpc = context.rpc_manager
+        try:
+            has_access = rpc.timeout(5).auth_check_user_in_project(
+                user_id=user_id,
+                project_id=project_id
+            )
+            if not has_access:
+                return {'error': 'User does not have access to this project'}
+        except Exception as e:
+            log.warning("Failed to check project access: %s", e)
+
+        try:
+            credentials = rpc.timeout(5).s3_credentials_get_or_create_for_bearer(
+                project_id=project_id,
+                user_id=user_id,
+                user_name=user.get('name', user.get('email', 'Bearer User'))
+            )
+            if not credentials:
+                return {'error': 'Failed to get S3 credentials for project'}
+        except Exception as e:
+            log.error("Failed to get/create S3 credentials: %s", e)
+            return {'error': 'Failed to get S3 credentials'}
+
+        return {
+            'credential': {
+                'access_key_id': credentials.get('access_key_id', 'bearer-auth'),
+                'project_id': project_id,
+                'user_id': user_id,
+                'name': credentials.get('name', 'Bearer Token User'),
+            }
+        }
+
+    except Exception as e:
+        log.error("Bearer auth verification failed: %s", e)
+        return {'error': f'Bearer authentication failed: {str(e)}'}
+
+
+def verify_s3_auth(flask_request) -> dict:
+    """
+    Verify S3 authentication for a request.
+
+    This is a non-decorator version for use in route handlers.
+    Supports both AWS Signature V4 and Bearer token authentication.
+
+    Args:
+        flask_request: The Flask request object
+
+    Returns:
+        dict with either:
+            {'credential': credential_dict} on success
+            {'error': error_message} on failure
+    """
     auth_header = flask_request.headers.get('Authorization', '')
+
+    # Check for Bearer token first
+    if auth_header.startswith('Bearer '):
+        return verify_bearer_auth(flask_request)
+
+    # Try AWS SigV4 header-based auth
     sig_components = parse_authorization_header(auth_header)
 
     # Try query string auth if no header

@@ -256,6 +256,51 @@ class RPC:
             log.error("Failed to delete S3 credential %s: %s", access_key_id, e)
             return False
 
+    @web.rpc('s3_credentials_get_or_create_for_bearer', 'get_or_create_for_bearer')
+    def get_or_create_for_bearer(self, project_id: int, user_id: int,
+                                  user_name: str = 'Bearer User') -> Optional[Dict]:
+        """
+        Get existing S3 credentials for a project or create new ones.
+
+        Used for Bearer token authentication where we need to map
+        a user's Bearer token to S3 credentials for a specific project.
+
+        Args:
+            project_id: The project ID to get/create credentials for
+            user_id: The user ID from the Bearer token
+            user_name: Display name for the credential
+
+        Returns:
+            Credential dict (without secret for existing, with secret for new)
+        """
+        try:
+            credentials = self.list_by_project(project_id)
+
+            for cred in credentials:
+                if cred.get('user_id') == user_id and cred.get('is_active', True):
+                    full_cred = self.get_by_access_key(cred['access_key_id'])
+                    if full_cred:
+                        return full_cred
+            for cred in credentials:
+                if cred.get('is_active', True):
+                    full_cred = self.get_by_access_key(cred['access_key_id'])
+                    if full_cred:
+                        return full_cred
+
+            new_cred = self.create(
+                name=f'Bearer - {user_name}',
+                project_id=project_id,
+                user_id=user_id,
+                expires_at=None,
+                permissions=['read', 'write']
+            )
+
+            return new_cred
+
+        except Exception as e:
+            log.error("Failed to get/create S3 credentials for bearer: %s", e)
+            return None
+
     @web.rpc('s3_credentials_rotate', 'rotate')
     def rotate(self, access_key_id: str, project_id: int) -> Optional[Dict]:
         """
