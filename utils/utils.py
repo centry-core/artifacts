@@ -14,146 +14,49 @@
 
 """ Generic utility functions for artifacts plugin """
 
-import base64
-from pathlib import Path
-from typing import Optional
-
-from pylon.core.tools import log
-from tools import auth, context, db
-
-from ..models.enums.all import FileType
-from ..models.artifact import Artifact
-from ..models.pd.artifact import ArtifactDetail
+from typing import Tuple
 
 
-def determine_artifact_type(filename: str) -> str:
+def parse_filepath(filepath: str) -> Tuple[str, str]:
     """
-    Determine artifact type from extension using index_types from elitea_core.
+    Parse filepath into bucket and filename components.
     
     Args:
-        filename: File name with extension
+        filepath: File path in format /{bucket}/{filename} or {bucket}/{filename}
         
     Returns:
-        FileType.IMAGE.value | FileType.DOCUMENT.value | FileType.UNKNOWN.value
+        Tuple of (bucket, filename)
+        
+    Raises:
+        ValueError: If filepath format is invalid
     """
-    try:
-        # Get index_types from elitea_core via RPC
-        index_types = context.rpc_manager.timeout(3).elitea_core_get_index_types()
-        
-        ext = Path(filename).suffix.lower()
-        
-        # Check image types
-        if ext in index_types.get("image_types", {}):
-            return FileType.IMAGE.value
-        
-        # Check document types
-        if ext in index_types.get("document_types", {}):
-            return FileType.DOCUMENT.value
-        
-        return FileType.UNKNOWN.value
-        
-    except Exception as e:
-        log.warning(f"Failed to determine artifact type for {filename}: {e}")
-        return FileType.UNKNOWN.value
+    # Remove leading slash if present
+    path = filepath.lstrip('/')
+    
+    if '/' not in path:
+        raise ValueError(f"Invalid filepath format: {filepath}. Expected /{'{bucket}'}/{'{filename}'}")
+    
+    # Split on first slash only - filename may contain additional slashes (folders)
+    bucket, filename = path.split('/', 1)
+    
+    if not bucket or not filename:
+        raise ValueError(f"Invalid filepath format: {filepath}. Bucket and filename required.")
+    
+    return bucket, filename
 
 
-def create_artifact_entry(
-    project_id: int,
-    bucket: str,
-    filename: str,
-    source: str = "manual",
-    prompt: Optional[str] = None
-) -> Optional[ArtifactDetail]:
+def make_filepath(bucket: str, filename: str) -> str:
     """
-    Create artifact entry in database. If artifact already exists for bucket+filename,
-    returns existing artifact details (idempotent behavior).
-
-    Args:
-        project_id: Project ID for database session
-        bucket: Bucket name
-        filename: File name
-        source: Source type ("generated" | "attached" | "manual")
-        prompt: Optional prompt text for generated artifacts
-
-    Returns:
-        ArtifactDetail model with artifact data or None if creation failed
-    """
-    try:
-        with db.get_session(project_id) as session:
-            # Check if artifact already exists
-            existing_artifact = session.query(Artifact).filter(
-                Artifact.bucket == bucket,
-                Artifact.filename == filename
-            ).first()
-
-            if existing_artifact:
-                log.debug(f"Artifact already exists: {existing_artifact.artifact_id} for {bucket}/{filename}")
-                artifact = existing_artifact
-            else:
-                # Create new artifact
-                artifact = Artifact(
-                    bucket=bucket,
-                    filename=filename,
-                    file_type=determine_artifact_type(filename),
-                    source=source,
-                    author_id=auth.current_user().get("id"),
-                    prompt=prompt
-                )
-                session.add(artifact)
-                session.commit()
-                session.refresh(artifact)  # Ensure artifact_id is populated
-                log.info(f"Created artifact {artifact.artifact_id} for {bucket}/{filename}")
-
-            result = ArtifactDetail.model_validate(artifact)
-
-        return result
-
-    except Exception as e:
-        log.error(f"Failed to create artifact entry: {e}")
-        return None
-
-
-def delete_artifact_entries(
-    project_id: int,
-    bucket: str,
-    filenames: Optional[list] = None
-) -> int:
-    """
-    Delete artifact entries from database.
+    Construct filepath from bucket and filename.
     
     Args:
-        project_id: Project ID for database session
         bucket: Bucket name
-        filenames: Optional list of filenames to delete. If None, deletes all artifacts for bucket.
+        filename: File name (may include folder path)
         
     Returns:
-        Number of deleted artifact entries
+        Filepath string in format /{bucket}/{filename}
     """
-    try:
-        with db.get_session(project_id) as session:
-            if filenames is None:
-                # Delete all artifacts for this bucket
-                deleted_count = session.query(Artifact).filter_by(bucket=bucket).delete()
-            else:
-                # Delete specific artifacts
-                deleted_count = session.query(Artifact).filter(
-                    Artifact.bucket == bucket,
-                    Artifact.filename.in_(filenames)
-                ).delete(synchronize_session=False)
-            
-            session.commit()
-            
-            if deleted_count > 0:
-                if filenames:
-                    log.info(f"Cleaned up {deleted_count} artifact entries for {bucket} (specific files)")
-                else:
-                    log.info(f"Cleaned up {deleted_count} artifact entries for bucket {bucket} (all files)")
-            
-            return deleted_count
-            
-    except Exception as e:
-        log.warning(f"Failed to clean up artifact entries for bucket {bucket}: {e}")
-        return 0
+    return f"/{bucket}/{filename}"
 
 
 
