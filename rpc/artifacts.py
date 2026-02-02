@@ -17,93 +17,63 @@
 from typing import Optional
 
 from hurry.filesize import size
-from tools import MinioClient, api_tools, db
+from tools import MinioClient, api_tools
 from pylon.core.tools import log, web
 
-from ..models.artifact import Artifact
-from ..utils.utils import create_artifact_entry
+from ..utils.utils import parse_filepath, make_filepath
 
 
 class RPC:
-    @web.rpc('artifacts_get_artifact_metadata_by_id', 'get_artifact_metadata_by_id')
-    def get_artifact_metadata_by_id(self, artifact_id: str, project_id: int) -> Optional[dict]:
+    @web.rpc('artifacts_get_file_data', 'get_file_data')
+    def get_file_data(
+        self,
+        project_id: int,
+        filepath: str = None,
+        bucket: str = None,
+        filename: str = None,
+        configuration_title: Optional[str] = None
+    ) -> Optional[dict]:
         """
-        Get artifact metadata by UUID.
+        Get file data from MinIO by filepath or bucket+filename.
 
         Args:
-            artifact_id: UUID string
-            project_id: Project ID for database session
-
-        Returns:
-            dict with bucket, filename, type, source, author_id, prompt, created_at
-            or None if not found
-        """
-
-        try:
-            with db.get_session(project_id) as session:
-                artifact = session.query(Artifact).filter_by(artifact_id=artifact_id).first()
-
-                if artifact:
-                    return {
-                        "artifact_id": str(artifact.artifact_id),
-                        "bucket": artifact.bucket,
-                        "filename": artifact.filename,
-                        "file_type": artifact.file_type,
-                        "source": artifact.source,
-                        "author_id": artifact.author_id,
-                        "prompt": artifact.prompt,
-                        "created_at": artifact.created_at.isoformat() if artifact.created_at else None
-                    }
-                return None
-        except Exception as e:
-            log.error(f"Error getting artifact {artifact_id}: {e}")
-            return None
-
-    @web.rpc('artifacts_get_artifact_with_data', 'get_artifact_with_data')
-    def get_artifact_with_data(self, artifact_id: str, project_id: int, configuration_title: Optional[str] = None) -> Optional[dict]:
-        """
-        Get artifact metadata and file data by UUID.
-
-        Args:
-            artifact_id: UUID string
-            project_id: Project ID for database session
+            project_id: Project ID
+            filepath: File path in format /{bucket}/{filename} (alternative to bucket+filename)
+            bucket: Bucket name (used if filepath not provided)
+            filename: File name (used if filepath not provided)
             configuration_title: Optional S3 configuration title
 
         Returns:
-            dict with artifact metadata (bucket, filename, file_type, etc.) and file_data (bytes)
-            or None if not found
+            dict with bucket, filename, file_data (bytes) or None if not found
 
         NOTE: Do not use across different pylons
         """
-
         try:
-            # Get artifact metadata
-            with db.get_session(project_id) as session:
-                artifact = session.query(Artifact).filter_by(artifact_id=artifact_id).first()
+            # Parse filepath if provided, otherwise use bucket+filename
+            if filepath:
+                bucket, filename = parse_filepath(filepath)
+            
+            if not bucket or not filename:
+                log.warning("Either filepath or bucket+filename must be provided")
+                return None
 
-                if not artifact:
-                    log.warning(f"Artifact {artifact_id} not found")
-                    return None
+            project = self.context.rpc_manager.timeout(3).project_get_or_404(project_id=project_id)
+            mc = MinioClient(project, configuration_title=configuration_title)
+            
+            file_data = mc.download_file(bucket, filename)
+            
+            if file_data is None:
+                log.warning(f"File not found: {bucket}/{filename}")
+                return None
 
-                # Get file data from MinIO
-                project = self.context.rpc_manager.timeout(3).project_get_or_404(project_id=project_id)
-                mc = MinioClient(project, configuration_title=configuration_title)
-                
-                file_data = mc.download_file(artifact.bucket, artifact.filename)
-
-                return {
-                    "artifact_id": str(artifact.artifact_id),
-                    "bucket": artifact.bucket,
-                    "filename": artifact.filename,
-                    "file_type": artifact.file_type,
-                    "source": artifact.source,
-                    "author_id": artifact.author_id,
-                    "prompt": artifact.prompt,
-                    "created_at": artifact.created_at.isoformat() if artifact.created_at else None,
-                    "file_data": file_data
-                }
+            return {
+                "filepath": make_filepath(bucket, filename),
+                "bucket": bucket,
+                "filename": filename,
+                "file_data": file_data
+            }
         except Exception as e:
-            log.error(f"Error getting artifact with data {artifact_id}: {e}")
+            log.error(f"Error getting file data for {filepath or f'{bucket}/{filename}'}: {e}")
             return None
 
     @web.rpc('artifacts_upload', 'upload_artifact')
@@ -113,8 +83,6 @@ class RPC:
         bucket: str,
         filename: str,
         file_data: bytes,
-        source: str = "manual",
-        prompt: Optional[str] = None,
         configuration_title: Optional[str] = None,
         create_if_not_exists: bool = True,
         bucket_retention_days: Optional[int] = None,
@@ -122,21 +90,18 @@ class RPC:
         overwrite: bool = False
     ) -> dict:
         """
-        Upload file to MinIO and register in artifacts table.
+        Upload file to MinIO.
         
         Handles all MinIO operations:
         - Bucket creation (if needed)
         - Duplicate file checking (unless overwrite=True)
         - File upload
-        - Artifact registration
 
         Args:
             project_id: Project ID
             bucket: Bucket name
             filename: File name
             file_data: File content bytes
-            source: Source type (manual, attached, generated)
-            prompt: Optional user prompt context
             configuration_title: Optional S3 configuration title
             create_if_not_exists: Create bucket if it doesn't exist
             bucket_retention_days: Retention policy for bucket (if creating)
@@ -144,7 +109,7 @@ class RPC:
             overwrite: Allow overwriting existing files
 
         Returns:
-            dict with artifact_id, bucket, filename, file_type, size, was_duplicate
+            dict with bucket, filename, size, was_duplicate
 
         Raises:
             RuntimeError: If duplicate file exists and overwrite=False
@@ -188,29 +153,18 @@ class RPC:
                 create_if_not_exists=False  # Already handled above
             )
 
-            # Register artifact in database and get details in one operation
-            artifact_details = create_artifact_entry(
-                project_id=project_id,
-                bucket=bucket,
-                filename=filename,
-                source=source,
-                prompt=prompt
-            )
-
-            if not artifact_details:
-                raise RuntimeError(f"Failed to create artifact entry for {bucket}/{filename}")
-
-            # Get uploaded file size in bytes (not bucket size)
+            # Get uploaded file size in bytes
             file_size_bytes = mc.get_file_size(bucket, filename) if filename else 0
 
+            log.info(f"Uploaded file {bucket}/{filename}")
+
             return {
-                "artifact_id": artifact_details.artifact_id,
-                "bucket": artifact_details.bucket,
-                "filename": artifact_details.filename,
-                "file_type": artifact_details.file_type,
-                "size": size(file_size_bytes),  # Convert bytes to human-readable format
+                "filepath": make_filepath(bucket, filename),
+                "bucket": bucket,
+                "filename": filename,
+                "size": size(file_size_bytes),
                 "was_duplicate": was_duplicate
             }
         except Exception as e:
-            log.error(f"Failed to upload and register artifact: {e}")
+            log.error(f"Failed to upload artifact: {e}")
             raise

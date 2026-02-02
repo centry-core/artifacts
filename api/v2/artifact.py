@@ -7,7 +7,6 @@ from pylon.core.tools import log
 from botocore.exceptions import ClientError
 
 from tools import MinioClient, api_tools, auth
-from ...utils.utils import delete_artifact_entries
 
 
 class ProjectAPI(api_tools.APIModeHandler):
@@ -43,9 +42,6 @@ class ProjectAPI(api_tools.APIModeHandler):
         
         # Delete from S3
         mc.remove_file(bucket, decoded_filename)
-        
-        # Clean up artifact table entry
-        delete_artifact_entries(project_id, bucket, [decoded_filename])
         
         return {"message": "Deleted", "size": size(mc.get_bucket_size(bucket))}, 200
 
