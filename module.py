@@ -79,7 +79,14 @@ class Module(module.ModuleModel):
 
     def ready(self):
         log.info("Artifacts ready callback")
-        from tools import VaultClient, config
+        from tools import VaultClient, config, this
+
+        try:
+            this.for_module("admin").module.register_admin_task(
+                "migrate_artifact_buckets_retention", self.migrate_artifact_buckets_retention
+            )
+        except Exception as e:
+            log.exception("Failed to register admin tasks: %s", e)
 
         from .models.pd.configuration import S3Config
         try:
