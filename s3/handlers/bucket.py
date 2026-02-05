@@ -224,3 +224,64 @@ class BucketHandler:
                 resource=f'/{bucket_name}',
                 status_code=500
             )
+
+    def move_object(self, source_bucket: str, source_key: str, dest_bucket: str, dest_key: str) -> Response:
+        """
+        Move an object from source bucket to destination bucket.
+
+        Uses server-side copy for optimal performance (no data transfer through application).
+        Limited to files up to 5GB.
+        """
+        try:
+            # Check if source bucket exists
+            existing_buckets = self.mc.list_bucket()
+            if source_bucket not in existing_buckets:
+                return error_response(
+                    code='NoSuchBucket',
+                    message=f'Source bucket {source_bucket} does not exist',
+                    resource=f'/{source_bucket}/{source_key}',
+                    status_code=404
+                )
+
+            # Check if destination bucket exists
+            if dest_bucket not in existing_buckets:
+                return error_response(
+                    code='NoSuchBucket',
+                    message=f'Destination bucket {dest_bucket} does not exist',
+                    resource=f'/{dest_bucket}/{dest_key}',
+                    status_code=404
+                )
+
+            # Check if source object exists
+            source_files = self.mc.list_files(source_bucket)
+            source_exists = any(f['name'] == source_key for f in source_files)
+            if not source_exists:
+                return error_response(
+                    code='NoSuchKey',
+                    message='Source key does not exist',
+                    resource=f'/{source_bucket}/{source_key}',
+                    status_code=404
+                )
+
+            # Perform server-side move (copy + delete)
+            self.mc.move_object(source_bucket, source_key, dest_bucket, dest_key)
+
+            return Response('', status=200)
+
+        except ValueError as e:
+            # Handle size limit errors
+            log.warning("MoveObject size limit exceeded: %s", e)
+            return error_response(
+                code='EntityTooLarge',
+                message=str(e),
+                resource=f'/{source_bucket}/{source_key}',
+                status_code=400
+            )
+        except Exception as e:
+            log.error("MoveObject failed: %s", e)
+            return error_response(
+                code='InternalError',
+                message=str(e),
+                resource=f'/{source_bucket}/{source_key}',
+                status_code=500
+            )
