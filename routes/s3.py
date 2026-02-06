@@ -107,6 +107,31 @@ class Route:  # pylint: disable=E1101,R0903
             return responses.error_response('InternalError', str(e), status_code=500)
 
     @web.route(
+        "/s3/move_objects/<string:source_bucket>/<string:source_filename>/<string:destination_bucket>/<string:destination_filename>",
+        methods=["POST"],
+        endpoint="s3_move_objects",
+        strict_slashes=False,
+    )
+    def s3_move_objects(
+        self, source_bucket: str, source_filename: str, destination_bucket: str, destination_filename: str
+    ):
+        """Move objects from source bucket to destination bucket (GET /move_objects/{source_bucket}/{destination_bucket})"""
+        auth_result = verify_s3_auth(flask.request)
+        if auth_result.get('error'):
+            return responses.error_response('AccessDenied', auth_result['error'], status_code=403)
+
+        credential = auth_result['credential']
+        project_id = credential['project_id']
+
+        try:
+            project = self.context.rpc_manager.call.project_get_or_404(project_id=project_id)
+            handler = BucketHandler(project)
+            return handler.move_object(source_bucket, source_filename, destination_bucket, destination_filename)
+        except Exception as e:
+            log.exception("S3 move objects error")
+            return responses.error_response('InternalError', str(e), status_code=500)
+
+    @web.route(
         "/s3/<string:bucket>/<path:key>",
         methods=["GET", "PUT", "DELETE", "HEAD", "POST"],
         endpoint="s3_object_operations",
