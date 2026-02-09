@@ -618,7 +618,12 @@ def verify_s3_auth(flask_request) -> dict:
     Verify S3 authentication for a request.
 
     This is a non-decorator version for use in route handlers.
-    Supports both AWS Signature V4 and Bearer token authentication.
+    Supports AWS Signature V4, Bearer token, and session authentication.
+
+    Priority:
+    1. AWS SigV4 (Authorization header or query string)
+    2. Bearer token (Authorization: Bearer ...)
+    3. Session auth (no Authorization header - uses auth.current_user())
 
     Args:
         flask_request: The Flask request object
@@ -630,8 +635,7 @@ def verify_s3_auth(flask_request) -> dict:
     """
     auth_header = flask_request.headers.get('Authorization', '')
 
-    # Check for Bearer token first
-    if auth_header.startswith('Bearer '):
+    if auth_header.startswith('Bearer ') or not auth_header:
         return verify_bearer_auth(flask_request)
 
     # Try AWS SigV4 header-based auth
