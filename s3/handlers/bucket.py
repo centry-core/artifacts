@@ -60,10 +60,33 @@ class BucketHandler:
             # Build bucket list with metadata
             bucket_list = []
             for bucket_name in buckets:
-                bucket_list.append({
+                bucket_info = {
                     'name': bucket_name,
                     'creation_date': datetime.utcnow()  # MinIO doesn't track creation date
-                })
+                }
+
+                # Get bucket size
+                try:
+                    bucket_size = self.mc.get_bucket_size(bucket_name)
+                    bucket_info['size'] = bucket_size
+                except Exception as size_err:
+                    log.debug(f"Failed to get size for bucket {bucket_name}: {size_err}")
+                    bucket_info['size'] = 0
+
+                # Try to get lifecycle/retention info
+                try:
+                    lifecycle = self.mc.get_bucket_lifecycle(bucket_name)
+                    rules = lifecycle.get('Rules', [])
+                    if rules:
+                        expiration = rules[0].get('Expiration', {})
+                        retention_days = expiration.get('Days')
+                        if retention_days:
+                            bucket_info['retention_days'] = retention_days
+                except Exception as lifecycle_err:
+                    log.debug(f"No lifecycle policy for bucket {bucket_name}: {lifecycle_err}")
+                    bucket_info['retention_days'] = None
+
+                bucket_list.append(bucket_info)
 
             return list_buckets_response(
                 buckets=bucket_list,
@@ -72,7 +95,7 @@ class BucketHandler:
             )
 
         except Exception as e:
-            log.error("ListBuckets failed: %s", e)
+            log.exception("ListBuckets failed")
             return error_response(
                 code='InternalError',
                 message=str(e),
