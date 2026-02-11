@@ -136,6 +136,7 @@ def list_buckets_response(buckets: List[Dict], owner_id: str = '',
             <Bucket>
                 <Name>mybucket</Name>
                 <CreationDate>2024-01-01T00:00:00.000Z</CreationDate>
+                <Size>1024000</Size>
                 <RetentionDays>30</RetentionDays>
             </Bucket>
         </Buckets>
@@ -151,6 +152,7 @@ def list_buckets_response(buckets: List[Dict], owner_id: str = '',
             {
                 "name": "mybucket",
                 "creationDate": "2024-01-01T00:00:00.000Z",
+                "size": 1024000,
                 "retentionDays": 30
             }
         ]
@@ -170,7 +172,8 @@ def list_buckets_response(buckets: List[Dict], owner_id: str = '',
             creation_date = bucket.get('creation_date', datetime.utcnow())
             bucket_data = {
                 'name': bucket['name'],
-                'creationDate': _format_datetime(creation_date)
+                'creationDate': _format_datetime(creation_date),
+                'size': bucket.get('size', 0)
             }
             retention_days = bucket.get('retention_days')
             if retention_days is not None:
@@ -191,6 +194,7 @@ def list_buckets_response(buckets: List[Dict], owner_id: str = '',
         SubElement(bucket_elem, 'Name').text = bucket['name']
         creation_date = bucket.get('creation_date', datetime.utcnow())
         SubElement(bucket_elem, 'CreationDate').text = _format_datetime(creation_date)
+        SubElement(bucket_elem, 'Size').text = str(bucket.get('size', 0))
         retention_days = bucket.get('retention_days')
         if retention_days is not None:
             SubElement(bucket_elem, 'RetentionDays').text = str(retention_days)
