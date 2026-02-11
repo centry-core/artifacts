@@ -136,6 +136,7 @@ def list_buckets_response(buckets: List[Dict], owner_id: str = '',
             <Bucket>
                 <Name>mybucket</Name>
                 <CreationDate>2024-01-01T00:00:00.000Z</CreationDate>
+                <RetentionDays>30</RetentionDays>
             </Bucket>
         </Buckets>
     </ListAllMyBucketsResult>
@@ -149,7 +150,8 @@ def list_buckets_response(buckets: List[Dict], owner_id: str = '',
         "buckets": [
             {
                 "name": "mybucket",
-                "creationDate": "2024-01-01T00:00:00.000Z"
+                "creationDate": "2024-01-01T00:00:00.000Z",
+                "retentionDays": 30
             }
         ]
     }
@@ -166,10 +168,14 @@ def list_buckets_response(buckets: List[Dict], owner_id: str = '',
         }
         for bucket in buckets:
             creation_date = bucket.get('creation_date', datetime.utcnow())
-            data['buckets'].append({
+            bucket_data = {
                 'name': bucket['name'],
                 'creationDate': _format_datetime(creation_date)
-            })
+            }
+            retention_days = bucket.get('retention_days')
+            if retention_days is not None:
+                bucket_data['retentionDays'] = retention_days
+            data['buckets'].append(bucket_data)
         return _to_json_response(data)
 
     # Default to XML
@@ -185,6 +191,9 @@ def list_buckets_response(buckets: List[Dict], owner_id: str = '',
         SubElement(bucket_elem, 'Name').text = bucket['name']
         creation_date = bucket.get('creation_date', datetime.utcnow())
         SubElement(bucket_elem, 'CreationDate').text = _format_datetime(creation_date)
+        retention_days = bucket.get('retention_days')
+        if retention_days is not None:
+            SubElement(bucket_elem, 'RetentionDays').text = str(retention_days)
 
     return _to_xml_response(root)
 
