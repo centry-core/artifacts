@@ -65,6 +65,14 @@ class BucketHandler:
                     'creation_date': datetime.utcnow()  # MinIO doesn't track creation date
                 }
 
+                # Get bucket size
+                try:
+                    bucket_size = self.mc.get_bucket_size(bucket_name)
+                    bucket_info['size'] = bucket_size
+                except Exception as size_err:
+                    log.debug(f"Failed to get size for bucket {bucket_name}: {size_err}")
+                    bucket_info['size'] = 0
+
                 # Try to get lifecycle/retention info
                 try:
                     lifecycle = self.mc.get_bucket_lifecycle(bucket_name)
@@ -87,7 +95,7 @@ class BucketHandler:
             )
 
         except Exception as e:
-            log.error("ListBuckets failed: %s", e)
+            log.exception("ListBuckets failed")
             return error_response(
                 code='InternalError',
                 message=str(e),
