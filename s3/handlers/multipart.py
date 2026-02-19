@@ -337,8 +337,8 @@ class MultipartHandler:
             # Sort parts by part number
             parts.sort(key=lambda x: x['part_number'])
 
-            # Combine parts
-            combined_data = b''
+            # Combine parts using bytearray to avoid O(n^2) copies from bytes +=
+            combined_data = bytearray()
             redis_client = self._get_redis()
 
             for part in parts:
@@ -360,13 +360,14 @@ class MultipartHandler:
                         status_code=400
                     )
 
-                combined_data += part_data
+                combined_data.extend(part_data)
 
             # Upload combined object
-            self.mc.upload_file(bucket_name, combined_data, key)
+            combined_bytes = bytes(combined_data)
+            self.mc.upload_file(bucket_name, combined_bytes, key)
 
             # Calculate final ETag (for multipart: hash of hashes + part count)
-            final_etag = f'"{hashlib.md5(combined_data).hexdigest()}-{len(parts)}"'
+            final_etag = f'"{hashlib.md5(combined_bytes).hexdigest()}-{len(parts)}"'
 
             # Clean up multipart data
             self._delete_upload_data(upload_id, len(parts))
