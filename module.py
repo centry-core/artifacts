@@ -79,7 +79,7 @@ class Module(module.ModuleModel):
 
     def ready(self):
         log.info("Artifacts ready callback")
-        from tools import VaultClient, config, this
+        from tools import config, this
 
         try:
             this.for_module("admin").module.register_admin_task(
@@ -100,9 +100,9 @@ class Module(module.ModuleModel):
                **s3_api_credentials_configuration_record
             )
 
-            secrets = VaultClient().get_all_secrets()
             try:
-                public_project_id = int(secrets['ai_project_id'])
+                from tools import elitea_config  # pylint: disable=C0415,E0401
+                public_project_id = int(elitea_config.get("ai_project_id", 1))
                 try:
                     config, was_created = self.context.rpc_manager.timeout(2).configurations_create_if_not_exists(dict(
                         project_id=public_project_id,
