@@ -130,5 +130,3 @@ class Module(module.ModuleModel):
             log.warning('Configurations plugin rpc not available')
 
 
-
-
