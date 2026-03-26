@@ -11,6 +11,16 @@ from pylon.core.tools import log
 from tools import MinioClient, api_tools, auth
 
 
+def _update_bucket_tags(mc, bucket, new_tags):
+    response = mc.get_bucket_tags(bucket)
+    existing_tags = {
+        tag['Key']: tag['Value']
+        for tag in response.get('TagSet', [])
+    } if response else {}
+    existing_tags.update(new_tags)
+    mc.set_bucket_tags(bucket=bucket, tags=existing_tags)
+
+
 def calculate_retention_days(project, expiration_value, expiration_measure):
     data_retention_limit = project.get_data_retention_limit()
     days = data_retention_limit or None
@@ -85,6 +95,35 @@ class ProjectAPI(api_tools.APIModeHandler):
         response = mc.create_bucket(bucket=bucket, bucket_type='local')
         if isinstance(response, dict) and response['Location'] and days:
             mc.configure_bucket_lifecycle(bucket=bucket, days=days)
+
+            today = datetime.today().date()
+            expiration_date = today + relativedelta(**{expiration_measure: int(expiration_value)})
+            _update_bucket_tags(mc, bucket, {
+                'expiration_date': expiration_date.isoformat(),
+                'notified_warnings': '',
+            })
+
+            if expiration_measure == 'days':
+                try:
+                    current_user = auth.current_user()
+                    user_id = current_user.get('id')
+                    if user_id:
+                        self.module.context.event_manager.fire_event(
+                            'notifications_stream', {
+                                'project_id': project_id,
+                                'user_id': user_id,
+                                'meta': {
+                                    'bucket_name': bucket,
+                                    'expiration_date': expiration_date.isoformat(),
+                                    'days_remaining': days,
+                                    'warning_threshold': 0,
+                                },
+                                'event_type': 'bucket_expiration_warning',
+                            }
+                        )
+                except Exception as e:
+                    log.warning('Failed to send immediate bucket expiration notification: %s', e)
+
             return {
                 "message": "Created",
                 "id": response['Location'].lstrip('/'),
@@ -118,6 +157,14 @@ class ProjectAPI(api_tools.APIModeHandler):
         if days:
             try:
                 mc.configure_bucket_lifecycle(bucket=bucket, days=days)
+
+                today = datetime.today().date()
+                expiration_date = today + relativedelta(**{expiration_measure: int(expiration_value)})
+                _update_bucket_tags(mc, bucket, {
+                    'expiration_date': expiration_date.isoformat(),
+                    'notified_warnings': '',
+                })
+
                 return {"message": f"Updated", "id": f"p--{project_id}.{bucket}"}, 200
             except Exception as e:
                 return {"message": str(e), "id": f"p--{project_id}.{bucket}"}, 400
