@@ -61,9 +61,6 @@ class RPC:
                     expiration_date = date.fromisoformat(expiration_date_str)
                     days_remaining = (expiration_date - today).days
 
-                    if days_remaining == 2:
-                        days_remaining = 1
-
                     if days_remaining != 1:
                         continue
 
