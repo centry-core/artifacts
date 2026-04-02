@@ -103,7 +103,7 @@ class ProjectAPI(api_tools.APIModeHandler):
                 'notified_warnings': '',
             })
 
-            if expiration_measure == 'days':
+            if days <= 1:
                 try:
                     current_user = auth.current_user()
                     user_id = current_user.get('id')
@@ -165,7 +165,7 @@ class ProjectAPI(api_tools.APIModeHandler):
                     'notified_warnings': '',
                 })
 
-                if expiration_measure == 'days':
+                if days <= 1:
                     try:
                         current_user = auth.current_user()
                         user_id = current_user.get('id')

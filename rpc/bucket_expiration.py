@@ -5,23 +5,14 @@ from pylon.core.tools import web, log
 from tools import MinioClient
 
 
-def _get_notification_thresholds(total_days):
-    """Get warning thresholds (days before expiration) based on total retention period."""
-    if total_days >= 365:
-        return [30, 7, 1]
-    elif total_days >= 30:
-        return [7, 1]
-    elif total_days >= 7:
-        return [5]
-    return []  # days retention - handled at creation time
-
-
-def _get_notified_set(tags):
-    """Get set of already-notified threshold days from bucket tags."""
-    notified_str = tags.get('notified_warnings', '')
-    if not notified_str:
-        return set()
-    return {int(x) for x in notified_str.split(',') if x.strip().isdigit()}
+def _update_bucket_tags(mc, bucket, new_tags):
+    response = mc.get_bucket_tags(bucket)
+    existing_tags = {
+        tag['Key']: tag['Value']
+        for tag in response.get('TagSet', [])
+    } if response else {}
+    existing_tags.update(new_tags)
+    mc.set_bucket_tags(bucket=bucket, tags=existing_tags)
 
 
 class RPC:
@@ -70,18 +61,14 @@ class RPC:
                     expiration_date = date.fromisoformat(expiration_date_str)
                     days_remaining = (expiration_date - today).days
 
-                    if days_remaining < 0:
+                    if days_remaining == 2:
+                        days_remaining = 1
+
+                    if days_remaining != 1:
                         continue
 
-                    thresholds = _get_notification_thresholds(total_days)
-                    notified = _get_notified_set(tags)
-
-                    new_notifications = [
-                        t for t in thresholds
-                        if days_remaining <= t and t not in notified
-                    ]
-
-                    if not new_notifications:
+                    notified = set(filter(None, tags.get('notified_warnings', '').split(',')))
+                    if '1' in notified:
                         continue
 
                     try:
@@ -92,29 +79,25 @@ class RPC:
                         log.warning('Failed to get users for project %s: %s', project_id, e)
                         continue
 
-                    for threshold in new_notifications:
-                        for user_id in user_ids:
-                            self.context.event_manager.fire_event(
-                                'notifications_stream', {
-                                    'project_id': project_id,
-                                    'user_id': user_id,
-                                    'meta': {
-                                        'bucket_name': bucket,
-                                        'expiration_date': expiration_date.isoformat(),
-                                        'days_remaining': days_remaining,
-                                        'warning_threshold': threshold,
-                                    },
-                                    'event_type': 'bucket_expiration_warning',
-                                }
-                            )
+                    for user_id in user_ids:
+                        self.context.event_manager.fire_event(
+                            'notifications_stream', {
+                                'project_id': project_id,
+                                'user_id': user_id,
+                                'meta': {
+                                    'bucket_name': bucket,
+                                    'expiration_date': expiration_date.isoformat(),
+                                    'days_remaining': days_remaining,
+                                    'warning_threshold': 1,
+                                },
+                                'event_type': 'bucket_expiration_warning',
+                            }
+                        )
 
-                    updated_notified = notified.union(set(new_notifications))
-                    updated_tags = dict(tags)
-                    updated_tags['notified_warnings'] = ','.join(
-                        str(d) for d in sorted(updated_notified)
-                    )
-                    mc.set_bucket_tags(bucket=bucket, tags=updated_tags)
-
+                    notified.add('1')
+                    _update_bucket_tags(mc, bucket, {
+                        'notified_warnings': ','.join(sorted(notified)),
+                    })
                 except Exception as e:
                     log.warning(
                         'Error processing bucket %s in project %s: %s',
